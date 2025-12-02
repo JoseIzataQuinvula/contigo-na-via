@@ -3,8 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Contigo na Via – Sua rota instantânea</title>
+  <title>Contigo na Via – Rota Grátis</title>
   <meta name="theme-color" content="#1a73e8">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet.routing.machine.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:system-ui,sans-serif;background:#f0f2f5;height:100vh;display:flex;flex-direction:column}
@@ -14,18 +17,11 @@
     label{display:block;margin:15px 0 8px;font-weight:bold;color:#333}
     input{width:100%;padding:16px;font-size:18px;border:2px solid #ddd;border-radius:12px}
     button{width:100%;padding:18px;margin-top:20px;font-size:20px;background:#34a853;color:white;border:none;border-radius:12px;font-weight:bold;cursor:pointer}
-    button:disabled{background:#999;cursor:not-allowed}
-    #map{height:500px;width:100%;margin-top:25px;border-radius:16px;border:3px solid #ddd;background:#eee}
+    #map{height:520px;width:100%;margin-top:25px;border-radius:16px;border:3px solid #ddd}
     .status{padding:15px;text-align:center;border-radius:12px;margin:15px 0;font-size:18px;font-weight:bold}
     .loading{background:#e3f2fd;color:#1565c0}
     .success{background:#e8f5e9;color:#2e7d32}
     .error{background:#ffebee;color:#c62828}
-    .info{background:#e8f5e9;padding:15px;border-radius:12px;text-align:center;margin:15px 0;font-size:18px}
-    
-    /* SUPRIME O ERRO DO GOOGLE MAPS 100% */
-    .gm-err-container, .gm-err-content, .gm-err-message, .gm-err-title, .gm-err-autocomplete, .gm-style-cc {display:none !important}
-    .gm-style > div:first-child > div:first-child > div:first-child {visibility:hidden !important}
-    #map:empty::before {content: "Carregando mapa..."; display: flex; align-items: center; justify-content: center; height: 100%; background: #f8f9fa; color: #666; font-size: 18px;}
   </style>
 </head>
 <body>
@@ -34,167 +30,99 @@
 
 <div class="content">
   <label>Sua localização atual</label>
-  <input type="text" id="origem" readonly placeholder="Buscando você no mapa...">
+  <input type="text" id="origem" readonly placeholder="Buscando você...">
 
   <div class="status loading" id="status">Procurando sua localização...</div>
 
   <label>Para onde você quer ir?</label>
   <input type="text" id="destino" placeholder="Ex: Shopping, farmácia, casa da mãe...">
 
-  <button onclick="calcularRota()" id="botaoRota" disabled>Traçar Rota Agora</button>
-
-  <div id="info"></div>
+  <button onclick="tracarRota()">Traçar Rota Agora</button>
   <div id="map"></div>
 </div>
 
-<!-- NOVA CHAVE CORRIGIDA -->
-<script>
-  // Ignora erros de autenticação do Google (funciona mesmo se demorar a propagar)
-  window.gm_authFailure = function() { console.clear(); };
-</script>
-
-<script async defer
-  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDXdUY1-1VqaKPzSWMnaeAZ_LZy4Cv9QBU&callback=initMap&libraries=places&v=weekly">
-</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet.routing.machine.js"></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
 <script>
-  let map, directionsService, directionsRenderer, meuMarcador;
+  let map, routingControl, marcadorUsuario;
   let minhaPos = null;
-  let loaded = false;
 
-  function initMap() {
-    if (loaded) return;
-    loaded = true;
+  // Inicializa o mapa
+  map = L.map('map').setView([-14.2350, -51.9253], 4);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
 
-    map = new google.maps.Map(document.getElementById('map'), {
-      zoom: 4,
-      center: { lat: -14.2350, lng: -51.9253 },
-      streetViewControl: false,
-      mapTypeControl: false
-    });
+  // Busca localização automaticamente
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      minhaPos = [pos.coords.latitude, pos.coords.longitude];
+      
+      map.setView(minhaPos, 17);
+      
+      if (marcadorUsuario) marcadorUsuario.remove();
+      marcadorUsuario = L.circleMarker(minhaPos, {
+        color: '#1a73e8',
+        radius: 12,
+        fillOpacity: 1
+      }).addTo(map).bindPopup("Você está aqui").openPopup();
 
-    directionsService = new google.maps.DirectionsService();
-    directionsRenderer = new google.maps.DirectionsRenderer({
-      suppressMarkers: true,
-      polylineOptions: { strokeColor: "#1a73e8", strokeWeight: 9 }
-    });
-    directionsRenderer.setMap(map);
-
-    // Autocomplete robusto
-    try {
-      new google.maps.places.Autocomplete(document.getElementById('destino'), { types: ['geocode', 'establishment'] });
-    } catch(e) {
-      console.log('Autocomplete fallback ativado');
-      document.getElementById('destino').addEventListener('input', function() {
-        // Sugestões simples se autocomplete falhar
-      });
-    }
-
-    // Inicia localização após carregamento
-    setTimeout(pegarLocalizacao, 500);
-  }
-
-  function pegarLocalizacao() {
-    const status = document.getElementById('status');
-
-    if (!navigator.geolocation) {
-      status.className = "status error";
-      status.textContent = "Localização não suportada no seu navegador";
-      ativarManual();
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        minhaPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-
-        // Zoom e centraliza no usuário
-        map.setCenter(minhaPos);
-        map.setZoom(18);
-
-        if (meuMarcador) meuMarcador.setMap(null);
-        meuMarcador = new google.maps.Marker({
-          position: minhaPos,
-          map: map,
-          title: "Você está aqui",
-          animation: google.maps.Animation.DROP,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 15,
-            fillColor: "#1a73e8",
-            fillOpacity: 1,
-            strokeColor: "#fff",
-            strokeWeight: 5
-          }
+      // Endereço reverso
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${minhaPos[0]}&lon=${minhaPos[1]}&format=json`)
+        .then(r => r.json())
+        .then(d => {
+          document.getElementById('origem').value = d.display_name.split(',')[0] + ", " + d.display_name.split(',')[1];
         });
 
-        // Endereço
-        new google.maps.Geocoder().geocode({ location: minhaPos }, (r) => {
-          document.getElementById('origem').value = r?.[0]?.formatted_address || "Minha localização atual";
-        });
-
-        status.className = "status success";
-        status.textContent = "Pronto! Digite seu destino";
-        document.getElementById('botaoRota').disabled = false;
-      },
-      () => {
-        status.className = "status error";
-        status.innerHTML = "Você bloqueou a localização.<br>Pode digitar o endereço manualmente.";
-        ativarManual();
-      },
-      { timeout: 15000, enableHighAccuracy: true }
-    );
+      document.getElementById('status').className = "status success";
+      document.getElementById('status').textContent = "Localização encontrada! Digite o destino";
+    }, () => {
+      document.getElementById('status').className = "status error";
+      document.getElementById('status').innerHTML = "Você bloqueou a localização.<br>Digite o endereço manualmente.";
+      document.getElementById('origem').readOnly = false;
+    });
   }
 
-  function ativarManual() {
-    document.getElementById('origem').readOnly = false;
-    document.getElementById('origem').placeholder = "Digite sua rua ou bairro";
-    document.getElementById('botaoRota').disabled = false;
-  }
+  // Autocomplete no campo destino
+  L.Control.geocoder({
+    placeholder: "Buscar destino...",
+    errorMessage: "Destino não encontrado",
+    geocoder: L.Control.Geocoder.nominatim()
+  }).addTo(map);
 
-  function calcularRota() {
-    const destino = document.getElementById('destino').value.trim();
+  function tracarRota() {
+    const destino = document.getElementById('destino').value;
     if (!destino) return alert("Digite para onde quer ir!");
 
-    const origem = minhaPos || document.getElementById('origem').value;
-    if (!origem) return alert("Aguarde sua localização");
+    if (routingControl) map.removeControl(routingControl);
 
-    document.getElementById('info').innerHTML = '<div class="status loading">Procurando melhor rota...</div>';
-
-    try {
-      directionsService.route({
-        origin: origem,
-        destination: destino,
-        travelMode: 'DRIVING'
-      }, (res, status) => {
-        if (status === 'OK') {
-          directionsRenderer.setDirections(res);
-          const leg = res.routes[0].legs[0];
-          document.getElementById('info').innerHTML = `
-            <div class="info">
-              Rota encontrada!<br>
-              <strong>${leg.distance.text}</strong> • 
-              <strong>${leg.duration.text}</strong>
-            </div>`;
-        } else {
-          document.getElementById('info').innerHTML = `
-            <div class="status error">
-              Não encontramos esse destino.<br>
-              Tente: "Padaria do Zé", "Farmácia", "Praia", nome da rua...
-            </div>`;
+    routingControl = L.Routing.control({
+      waypoints: [
+        minhaPos ? L.latLng(minhaPos[0], minhaPos[1]) : null,
+        null
+      ],
+      routeWhileDragging: false,
+      addWaypoints: false,
+      createMarker: function(i, wp) {
+        if (i === 1) {
+          // Busca coordenadas do destino digitado
+          fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destino)}&format=json&limit=1`)
+            .then(r => r.json())
+            .then(data => {
+              if (data && data[0]) {
+                const latlng = L.latLng(data[0].lat, data[0].lon);
+                routingControl.spliceWaypoints(1, 1, latlng);
+              }
+            });
         }
-      });
-    } catch(e) {
-      document.getElementById('info').innerHTML = '<div class="status error">Erro temporário no mapa. Tente novamente em 1 minuto.</div>';
-    }
+        return null;
+      },
+      lineOptions: { styles: [{ color: '#1a73e8', weight: 8 }] },
+      geocoder: L.Control.Geocoder.nominatim()
+    }).addTo(map);
   }
-
-  // Fallback se mapa não carregar em 10s
-  setTimeout(() => {
-    if (!loaded) {
-      document.getElementById('status').innerHTML = '<div class="status error">Mapa demorando a carregar. Verifique sua conexão e recarregue a página.</div>';
-    }
-  }, 10000);
 </script>
 
 </body>
