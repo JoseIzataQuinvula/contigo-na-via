@@ -36,7 +36,7 @@
 
   <label>Para onde você quer ir?</label>
   <div style="position:relative">
-    <input type="text" id="destino" placeholder="Ex: Camama, Talatona, Kilamba, Viana..." autocomplete="off">
+    <input type="text" id="destino" placeholder="Ex: Olibata Cama Mesa Banho, Camama, Talatona..." autocomplete="off">
     <div id="sugestoes" class="sugestoes" style="display:none"></div>
   </div>
 
@@ -84,7 +84,7 @@
     document.getElementById('origem').readOnly = false;
   });
 
-  // Autocomplete FORÇADO PARA ANGOLA
+  // Autocomplete FOCADO EM ANGOLA (com busca mais ampla)
   const campo = document.getElementById('destino');
   const box = document.getElementById('sugestoes');
 
@@ -92,8 +92,8 @@
     const q = campo.value.trim();
     if (q.length < 2) { box.style.display = 'none'; return; }
 
-    // FORÇA ANGOLA nas buscas (countrycodes=ao)
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&countrycodes=ao&format=json&limit=7&addressdetails=1&bounded=1&viewbox=11.5,-19,19,-4`)
+    // Busca ampla em Angola (sem bounded para mais resultados)
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&countrycodes=ao&format=json&limit=7&addressdetails=1&featureType=house`)
       .then(r => r.json())
       .then(data => {
         box.innerHTML = '';
@@ -119,29 +119,50 @@
     if (!campo.contains(e.target) && !box.contains(e.target)) box.style.display = 'none';
   });
 
-  // Traça rota
+  // Traça rota com TENTATIVAS AUTOMÁTICAS (resolve o erro)
   function tracarRota() {
     const destino = campo.value.trim();
     if (!destino) return alert("Digite o destino!");
 
     if (routingControl) map.removeControl(routingControl);
 
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destino + ", Angola")}&countrycodes=ao&format=json&limit=1`)
+    // TENTATIVA 1: Busca direta
+    buscarDestino(destino + ", Angola");
+
+    // Se falhar em 3s, tenta variação automática
+    setTimeout(() => {
+      if (!routingControl) {
+        buscarDestino(destino + " Luanda");
+      }
+    }, 3000);
+
+    // Se ainda falhar, tenta sem sufixo
+    setTimeout(() => {
+      if (!routingControl) {
+        buscarDestino(destino);
+      }
+    }, 6000);
+  }
+
+  function buscarDestino(query) {
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&countrycodes=ao&format=json&limit=1&addressdetails=1`)
       .then(r => r.json())
       .then(data => {
-        if (!data[0]) return alert("Destino não encontrado em Angola. Tente outro nome.");
+        if (data[0]) {
+          const fim = L.latLng(data[0].lat, data[0].lon);
 
-        const fim = L.latLng(data[0].lat, data[0].lon);
+          routingControl = L.Routing.control({
+            waypoints: [L.latLng(minhaPos[0], minhaPos[1]), fim],
+            routeWhileDragging: false,
+            addWaypoints: false,
+            createMarker: () => null,
+            lineOptions: { styles: [{ color: '#1a73e8', weight: 9 }] }
+          }).addTo(map);
 
-        routingControl = L.Routing.control({
-          waypoints: [L.latLng(minhaPos[0], minhaPos[1]), fim],
-          routeWhileDragging: false,
-          addWaypoints: false,
-          createMarker: () => null,
-          lineOptions: { styles: [{ color: '#1a73e8', weight: 9 }] }
-        }).addTo(map);
-
-        map.fitBounds([minhaPos, fim]);
+          map.fitBounds([minhaPos, fim]);
+          return; // Sucesso!
+        }
+        // Se não achar, não faz nada (outras tentativas rodam)
       });
   }
 
