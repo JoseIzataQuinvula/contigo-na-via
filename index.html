@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Contigo na Via - Mototáxi</title>
+  <meta name="theme-color" content="#dc2626" />
+  <title>Contigo na Via – Mototáxi</title>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -11,13 +12,12 @@
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif'],
-          },
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
           colors: {
-            primary: '#dc2626', // vermelho vibrante
+            primary: '#dc2626',
             success: '#16a34a',
-          }
+          },
+          animation: { spin: 'spin 1s linear infinite' }
         }
       }
     }
@@ -25,12 +25,13 @@
 
   <!-- Google Fonts: Inter -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  
+
   <!-- Material Symbols -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 
   <style>
-    body { font-family: 'Inter', sans-serif; }
+    body { font-family: 'Inter', sans-serif; margin: 0; }
     #map { height: 100vh; width: 100%; }
     .overlay {
       position: fixed;
@@ -40,302 +41,290 @@
       background: white;
       border-top-left-radius: 1.5rem;
       border-top-right-radius: 1.5rem;
-      box-shadow: 0 -8px 32px rgba(0,0,0,0.12);
+      box-shadow: 0 -10px 40px rgba(0,0,0,0.15);
       transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
       z-index: 10;
+      max-height: 90vh;
+      overflow-y: auto;
     }
     .overlay.hidden { transform: translateY(100%); }
     .input-group {
-      @apply flex items-center bg-gray-100 rounded-xl px- px-4 py-4 mb-3 shadow-sm;
+      @apply flex items-center bg-gray-100 rounded-xl px-4 py-4 mb-3 shadow-inner;
     }
-    .price-estimate { font-size: 2.5rem; font-weight: 800; }
+    .price-estimate { font-size: 2.8rem; font-weight: 800; }
     #toast {
-      @apply fixed bottom-20 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full bg-gray-900 text-white text-sm font-medium shadow-2xl z-50 opacity-0 transition-opacity duration-300;
+      @apply fixed bottom-24 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full bg-gray-900 text-white text-sm font-medium shadow-2xl z-50 opacity-0 transition-opacity duration-300 pointer-events-none;
     }
   </style>
 </head>
-<body class="bg-gray-50 overflow-hidden">
+<body class="bg-gray-100 overflow-hidden">
 
-  <div id="app" class="relative h-screen">
+  <div class="relative h-screen">
 
     <!-- Mapa -->
     <div id="map"></div>
 
     <!-- Header -->
-    <header class="absolute top-0 left-0 right-0 bg-white shadow-lg z-20 px-4 py-3 flex items-center justify-between">
-      <button id="menu-btn" class="p-2 rounded-lg hover:bg-gray-100 transition">
-        <span class="material-symbols-outlined text-2xl">menu</span>
+    <header class="absolute top-0 inset-x-0 bg-white shadow-lg z-20 px-5 py-4 flex items-center justify-between">
+      <button id="menu-btn" class="p-2 rounded-xl hover:bg-gray-100 transition">
+        <span class="material-symbols-outlined text-3xl">menu</span>
       </button>
       <h1 class="text-xl font-bold text-gray-800">Contigo na Via</h1>
-      <button id="profile-btn" class="p-2 rounded-lg hover:bg-gray-100 transition">
-        <span class="material-symbols-outlined text-2xl">person</span>
+      <button id="profile-btn" class="p-2 rounded-xl hover:bg-gray-100 transition">
+        <span class="material-symbols-outlined text-3xl">person</span>
       </button>
     </header>
 
-    <!-- Overlay: Busca -->
-    <div id="search-overlay" class="overlay p-6 pt-8">
-      <p id="auth-status" class="text-xs text-gray-500 mb-3 text-center"></p>
+    <!-- Tela 1: Busca -->
+    <div id="search-overlay" class="overlay p-6 pt-10">
+      <p id="status-text" class="text-xs text-center text-gray-500 mb-4"></p>
 
       <div class="input-group">
-        <span class="material-symbols-outlined text-green-600 mr-3">my_location</span>
+        <span class="material-symbols-outlined text-success mr-4">my_location</span>
         <input type="text" id="origem-input" placeholder="Buscando sua localização..." readonly
-          class="bg-transparent flex-1 outline-none text-gray-800 font-medium" />
+          class="bg-transparent flex-1 outline-none font-medium text-gray-800" />
       </div>
 
       <div class="input-group">
-        <span class="material-symbols-outlined text-red-600 mr-3">location_on</span>
+        <span class="material-symbols-outlined text-primary mr-4">location_on</span>
         <input type="text" id="destino-input" placeholder="Para onde vamos hoje?"
           class="bg-transparent flex-1 outline-none text-gray-800" autocomplete="off" />
       </div>
 
       <button id="btn-ver-preco" disabled
-        class="mt-6 w-full bg-primary text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-3">
-        <span class="material-symbols-outlined">motorcycle</span>
-        <span>Ver Preço e Chamar</span>
+        class="mt-6 w-full bg-primary text-white py-5 rounded-xl font-bold text-lg shadow-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-3">
+        <span class="material-symbols-outlined text-2xl">motorcycle</span>
+        Ver Preço e Chamar Moto
       </button>
     </div>
 
-    <!-- Overlay: Confirmação -->
-    <div id="confirm-overlay" class="overlay hidden p-6 pt-8">
-      <h2 class="text-2xl font-bold text-gray-800 mb-6">Confirme sua corrida</h2>
+    <!-- Tela 2: Confirmação -->
+    <div id="confirm-overlay" class="overlay hidden p-6 pt-10">
+      <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Confirme sua corrida</h2>
 
-      <div class="space-y-3 text-gray-700 mb-8">
-        <div class="flex justify-between"><span>De:</span> <span id="confirm-origem" class="font-semibold text-right max-w-[60%]"></span></div>
-        <div class="flex justify-between"><span>Para:</span> <span id="confirm-destino" class="font-semibold text-right max-w-[60%]"></span></div>
-        <div class="flex justify-between"><span>Distância:</span> <strong id="confirm-distancia">0 km</strong></div>
+      <div class="bg-gray-50 rounded-2xl p-5 space-y-4 mb-8">
+        <div class="flex justify-between"><span class="text-gray-600">De:</span>
+          <span id="confirm-origem" class="font-semibold text-right max-w-[60%]"></span></div>
+        <div class="flex justify-between"><span class="text-gray-600">Para:</span>
+          <span id="confirm-destino" class="font-semibold text-right max-w-[60%]"></span></div>
+        <div class="flex justify-between"><span class="text-gray-600">Distância:</span>
+          <strong id="confirm-distancia" class="text-primary">0 km</strong></div>
       </div>
 
       <div class="text-center mb-8">
-        <div class="price-estimate text-success" id="preco-final">R$ 0,00</div>
+        <div id="preco-final" class="price-estimate text-success">R$ 0,00</div>
       </div>
 
-      <div class="bg-gray-100 rounded-xl px-4 py-3 flex items-center gap-3 mb-8">
+      <div class="bg-gray-100 rounded-xl px-5 py-4 flex items-center gap-3 mb-8">
         <span class="material-symbols-outlined text-gray-600">payments</span>
-        <span class="text-sm font-medium">PIX • Dinheiro • Cartão</span>
+        <span class="font-medium">PIX • Dinheiro • Cartão na máquina</span>
       </div>
 
-      <button id="btn-confirmar-corrida"
-        class="w-full bg-success text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-700 transition flex items-center justify-center gap-3">
-        <span class="material-symbols-outlined">check_circle</span>
-        Confirmar Corrida
+      <button id="btn-confirmar"
+        class="w-full bg-success text-white py-5 rounded-xl font-bold text-lg shadow-lg hover:bg-green-700 transition flex items-center justify-center gap-3">
+        <span class="material-symbols-outlined text-2xl">check_circle</span>
+        Confirmar e Chamar Motorista
       </button>
 
       <button id="btn-voltar"
-        class="mt-3 w-full bg-gray-200 text-gray-800 py-4 rounded-xl font-semibold hover:bg-gray-300 transition">
+        class="mt-4 w-full bg-gray-200 text-gray-800 py-5 rounded-xl font-semibold hover:bg-gray-300 transition">
         Voltar
       </button>
     </div>
 
+    </div>
+
     <!-- Toast -->
-    <div id="toast">Mensagem aqui</div>
+    <div id="toast">Aguarde...</div>
   </div>
 
-  <!-- Google Maps (chave via config segura) -->
-  <script>
-    // CONFIGURAÇÕES SEGURAS - NUNCA EXPOR NO CLIENTE EM PRODUÇÃO!
-    // Em produção, use um backend proxy ou variáveis de ambiente
-    const GOOGLE_MAPS_API_KEY = "SUA_CHAVE_AQUI; // Substitua ou use proxy
-    const FIREBASE_CONFIG = { /* Cole aqui seu firebaseConfig */ };
-  </script>
+  <!-- Configurações (seguras) -->
+  <script src="config.js"></script>
 
+  <!-- Google Maps -->
   <script async defer
-    src=`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=initApp`>
+    src="https://maps.googleapis.com/maps/api/js?key=${window.APP_CONFIG?.GOOGLE_MAPS_API_KEY || ''}&libraries=places&callback=initApp">
   </script>
 
+  <!-- App Principal -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
-
-    // Variáveis globais
-    let map, directionsService, directionsRenderer, geocoder;
-    let origin = null, destination = null;
-    let userId = null;
-    let db, auth;
-
-    // Inicialização principal
-    window.initApp = function() {
-      initFirebase();
-      initMap();
+    const CONFIG = window.APP_CONFIG || {
+      GOOGLE_MAPS_API_KEY: "",
+      FIREBASE_PRICE: 6.00,
+      PRICE_PER_KM: 2.90,
+      FIRESTORE_COLLECTION: "corridas"
     };
 
-    function initFirebase() {
-      if (typeof FIREBASE_CONFIG.apiKey === 'string') {
-        const app = initializeApp(FIREBASE_CONFIG);
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+    let map, directionsService, directionsRenderer, geocoder;
+    let origin = null, destination = null;
+    let userId = "offline";
+    let db = null, auth = null;
+
+    window.initApp = function () {
+      if (CONFIG.FIREBASE_CONFIG?.apiKey) {
+        const app = initializeApp(CONFIG.FIREBASE_CONFIG);
         auth = getAuth(app);
         db = getFirestore(app);
 
-        onAuthStateChanged(auth, (user) => {
-          if (user) {
-            userId = user.uid;
-            document.getElementById('auth-status').textContent = `Online • ID: ${user.uid.slice(0,8)}...`;
-          } else {
-            signInAnonymously(auth).catch(console.error);
-          }
+        onAuthStateChanged(auth, user => {
+          if (user) userId = user.uid;
+          else signInAnonymously(auth);
+          document.getElementById('status-text').textContent = user ? `Online • ${user.uid.slice(0,8)}...` : "Modo offline";
         });
       } else {
-        document.getElementById('auth-status').textContent = "Firebase não configurado (modo demo)";
+        document.getElementById('status-text').textContent = "Modo demo (sem Firebase)";
       }
-    }
+
+      initMap();
+    };
 
     function initMap() {
       map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: -23.5505, lng: -46.6333 },
-        zoom: 14,
+        zoom: 15,
         disableDefaultUI: true,
         zoomControl: true,
         styles: [{ featureType: "poi", stylers: [{ visibility: "off" }] }]
       });
 
       directionsService = new google.maps.DirectionsService();
-      directionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: true, polylineOptions: { strokeColor: "#dc2626", strokeWeight: 6 } });
+      directionsRenderer = new google.maps.DirectionsRenderer({
+        suppressMarkers: true,
+        polylineOptions: { strokeColor: "#dc2626", strokeWeight: 7 }
+      });
       directionsRenderer.setMap(map);
       geocoder = new google.maps.Geocoder();
 
-      getUserLocation();
+      getLocationAndStart();
       setupAutocomplete();
-      setupEventListeners();
+      setupButtons();
     }
 
-    function getUserLocation() {
+    function getLocationAndStart() {
       const input = document.getElementById('origem-input');
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => {
-          const location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          map.setCenter(location);
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          map.setCenter(loc);
           map.setZoom(16);
 
           new google.maps.Marker({
-            position: location,
+            position: loc,
             map,
-            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#16a34a', fillOpacity: 1, strokeWeight: 3, strokeColor: '#fff' }
+            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 11, fillColor: '#16a34a', fillOpacity: 1, strokeWeight: 4, strokeColor: '#fff' }
           });
 
-          reverseGeocode(location, addr => {
+          reverseGeocode(loc, addr => {
             input.value = addr;
-            origin = { ...location, address: addr };
+            origin = { ...loc, address: addr };
           });
 
         }, () => {
           input.value = "Localização bloqueada";
-          showToast("Ative a localização para melhor experiência");
+          showToast("Ative a localização para usar o app");
         });
       }
     }
 
-    function reverseGeocode(latlng, callback) {
-      geocoder.geocode({ location: latlng }, (results, status) => {
-        callback(status === "OK" && results[0] ? results[0].formatted_address : "Endereço desconhecido");
+    function reverseGeocode(latlng, cb) {
+      geocoder.geocode({ location: latlng }, (r, s) => {
+        cb(s === "OK" && r[0] ? r[0].formatted_address : "Endereço não encontrado");
       });
     }
 
     function setupAutocomplete() {
-      const destinoInput = document.getElementById('destino-input');
-      const origemInput = document.getElementById('origem-input');
+      const destInput = document.getElementById('destino-input');
+      const autocomplete = new google.maps.places.Autocomplete(destInput, {
+        componentRestrictions: { country: "br" },
+        fields: ["geometry", "formatted_address"]
+      });
 
-      new google.maps.places.Autocomplete(destinoInput, { componentRestrictions: { country: 'br' }, fields: ["geometry", "formatted_address"] })
-        .addListener("place_changed", () => {
-          const place = this.getPlace();
-          if (place.geometry) {
-            destination = {
-              lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng(),
-              address: place.formatted_address
-            };
-            document.getElementById('btn-ver-preco').disabled = false;
-          }
-        });
-
-      new google.maps.places.Autocomplete(origemInput, { componentRestrictions: { country: 'br' } })
-        .addListener("place_changed", () => {
-          const place = this.getPlace();
-          if (place.geometry) {
-            origin = {
-              lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng(),
-              address: place.formatted_address
-            };
-            map.setCenter(place.geometry.location);
-          }
-        });
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (place.geometry) {
+          destination = {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+            address: place.formatted_address
+          };
+          document.getElementById('btn-ver-preco').disabled = false;
+        }
+      });
     }
 
     function calculateRoute() {
-      if (!origin || !destination) return showToast("Selecione origem e destino");
+      if (!origin || !destination) return showToast("Selecione o destino");
 
       directionsService.route({
         origin: new google.maps.LatLng(origin.lat, origin.lng),
         destination: new google.maps.LatLng(destination.lat, destination.lng),
         travelMode: google.maps.TravelMode.DRIVING,
-      }, (result, status) => {
+      }, (res, status) => {
         if (status === "OK") {
-          directionsRenderer.setDirections(result);
-          const route = result.routes[0].legs[0];
-          const distancia = (route.distance.value / 1000).toFixed(1);
-          const preco = (5 + distancia * 2.8).toFixed(2); // R$5 bandeirada + R$2,80/km
+          directionsRenderer.setDirections(res);
+          const leg = res.routes[0].legs[0];
+          const km = (leg.distance.value / 1000).toFixed(1);
+          const preco = (CONFIG.PRECO_BASE + km * CONFIG.PRECO_POR_KM).toFixed(2);
 
-          // Preço realista para mototáxi
-
-          // Preencher confirmação
           document.getElementById('confirm-origem').textContent = origin.address;
           document.getElementById('confirm-destino').textContent = destination.address;
-          document.getElementById('confirm-distancia').textContent = `${distancia} km`;
+          document.getElementById('confirm-distancia').textContent = `${km} km`;
           document.getElementById('preco-final').textContent = `R$ ${preco.replace('.',',')}`;
 
-          // Trocar tela
           document.getElementById('search-overlay').classList.add('hidden');
           document.getElementById('confirm-overlay').classList.remove('hidden');
-        } else {
-          showToast("Não foi possível calcular a rota");
-        }
+        } else showToast("Rota não encontrada");
       });
     }
 
     async function confirmarCorrida() {
-      const btn = document.getElementById('btn-confirmar-corrida');
+      const btn = document.getElementById('btn-confirmar');
       btn.disabled = true;
-      btn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span> Procurando motorista...`;
+      btn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span> Procurando piloto...`;
 
       const preco = parseFloat(document.getElementById('preco-final').textContent.replace(/[^\d,]/g,'').replace(',','.'));
 
-      const corrida = {
+      const dados = {
         userId,
         origem: origin,
         destino: destination,
         precoEstimado: preco,
-        distancia: parseFloat(document.getElementById('confirm-distancia').textContent),
-        status: 'solicitada',
+        status: "solicitada",
         criadoEm: serverTimestamp()
       };
 
       try {
-        if (db) await addDoc(collection(db, "corridas"), corrida);
-        showToast("Corrida solicitada! Em breve um motorista aceitará");
-        setTimeout(() => location.reload(), 4000); // Simulação de aceitação
+        if (db) await addDoc(collection(db, CONFIG.FIRESTORE_COLLECTION), dados);
+        showToast("Corrida solicitada! Em breve um piloto aceitará");
+        setTimeout(() => location.reload(), 5000);
       } catch (e) {
-        showToast("Erro ao enviar solicitação");
+        showToast("Erro ao enviar. Tente novamente");
         console.error(e);
       } finally {
         btn.disabled = false;
-        btn.innerHTML = `<span class="material-symbols-outlined">check_circle</span> Confirmar Corrida`;
+        btn.innerHTML = `<span class="material-symbols-outlined text-2xl">check_circle</span> Confirmar e Chamar Motorista`;
       }
     }
 
-    function setupEventListeners() {
+    function setupButtons() {
       document.getElementById('btn-ver-preco').onclick = calculateRoute;
       document.getElementById('btn-voltar').onclick = () => {
         document.getElementById('confirm-overlay').classList.add('hidden');
         document.getElementById('search-overlay').classList.remove('hidden');
         directionsRenderer.setDirections({routes: []});
       };
-      document.getElementById('btn-confirmar-corrida').onclick = confirmarCorrida;
+      document.getElementById('btn-confirmar').onclick = confirmarCorrida;
     }
 
     function showToast(msg) {
-      const toast = document.getElementById('toast');
-      toast.textContent = msg;
-      toast.style.opacity = '1';
-      setTimeout(() => toast.style.opacity = '0', 3500);
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.opacity = '1';
+      setTimeout(() => t.style.opacity = '0', 4000);
     }
   </script>
 </body>
