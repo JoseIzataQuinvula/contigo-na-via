@@ -15,13 +15,16 @@
     .content{flex:1;padding:20px;overflow:auto}
     label{display:block;margin:15px 0 8px;font-weight:bold;color:#333}
     input{width:100%;padding:16px;font-size:18px;border:2px solid #ddd;border-radius:12px}
-    button{width:100%;padding:18px;margin-top:20px;font-size:20px;background:#34a853;color:white;border:none;border-radius:12px;font-weight:bold}
+    button{width:100%;padding:18px;margin-top:20px;font-size:20px;background:#34a853;color:white;border:none;border-radius:12px;font-weight:bold;cursor:pointer}
+    button:disabled{background:#999;cursor:not-allowed}
     #map{height:520px;width:100%;margin-top:25px;border-radius:16px;border:3px solid #1a73e8}
     .status{padding:15px;text-align:center;border-radius:12px;margin:15px 0;font-size:18px;font-weight:bold}
     .success{background:#e8f5e9;color:#2e7d32}
+    .error{background:#ffebee;color:#c62828}
     .sugestoes{position:absolute;background:white;border:1px solid #ccc;border-radius:8px;max-height:300px;overflow-y:auto;z-index:10000;width:92%;margin-top:-8px;box-shadow:0 6px 20px rgba(0,0,0,0.2)}
     .sugestao{padding:16px;cursor:pointer;font-size:17px}
     .sugestao:hover{background:#e3f2fd}
+    .loading{background:#e3f2fd;color:#1565c0}
   </style>
 </head>
 <body>
@@ -31,15 +34,15 @@
 <div class="content">
   <label>Sua localização atual</label>
   <input type="text" id="origem" readonly placeholder="Buscando você...">
-  <div class="status success" id="status">Buscando sua localização...</div>
+  <div class="status loading" id="status">Buscando sua localização...</div>
 
   <label>Para onde você quer ir?</label>
   <div style="position:relative">
-    <input type="text" id="destino" placeholder="Ex: Olibata, Shoprite, Camama, Kilamba..." autocomplete="off">
+    <input type="text" id="destino" placeholder="Ex: Camama, Olibata, Shoprite..." autocomplete="off">
     <div id="sugestoes" class="sugestoes" style="display:none"></div>
   </div>
 
-  <button onclick="tracarRota()">Traçar Rota Agora</button>
+  <button onclick="tracarRota()" id="btnRota" disabled>Traçar Rota Agora</button>
   <div id="map"></div>
 </div>
 
@@ -56,7 +59,7 @@
     attribution: '© OpenStreetMap'
   }).addTo(map);
 
-  // Sua localização
+  // Busca localização do usuário
   navigator.geolocation.getCurrentPosition(pos => {
     minhaPos = [pos.coords.latitude, pos.coords.longitude];
     map.setView(minhaPos, 18);
@@ -69,20 +72,25 @@
       })
     }).addTo(map).bindPopup("<b>Você está aqui!</b>").openPopup();
 
-    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${minhaPos[0]}&lon=${minhaPos[1]}&format=json`)
+    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${minhaPos[0]}&lon=${minhaPos[1]}&format=json&zoom=18`)
       .then(r => r.json())
       .then(d => {
-        document.getElementById('origem').value = d.display_name.split(',').slice(0,3).join(', ');
-      });
+        const end = d.display_name.split(',').slice(0,3).join(', ');
+        document.getElementById('origem').value = end;
+      })
+      .catch(() => { document.getElementById('origem').value = "Sua localização atual"; });
 
-    document.getElementById('status').textContent = "Localização encontrada!";
+    document.getElementById('status').className = "status success";
+    document.getElementById('status').textContent = "Localização encontrada! Digite o destino.";
+    document.getElementById('btnRota').disabled = false;
   }, () => {
     document.getElementById('status').className = "status error";
-    document.getElementById('status').textContent = "Localização bloqueada. Digite manualmente.";
+    document.getElementById('status').textContent = "Localização bloqueada. Digite origem e destino manualmente.";
     document.getElementById('origem').readOnly = false;
-  });
+    document.getElementById('btnRota').disabled = false;
+  }, { timeout: 10000 });
 
-  // Autocomplete SUPER INTELIGENTE para Angola
+  // Autocomplete CORRIGIDO para Angola (mais resultados, sem filtro restrito)
   const campo = document.getElementById('destino');
   const box = document.getElementById('sugestoes');
 
@@ -90,62 +98,66 @@
     const q = campo.value.trim();
     if (q.length < 2) { box.style.display = 'none'; return; }
 
-    // Busca FORTE em Angola + perto da sua localização
-    const bbox = minhaPos ? 
-      `&viewbox=${minhaPos[1]-0.1},${minhaPos[0]+0.1},${minhaPos[1]+0.1},${minhaPos[0]-0.1}&bounded=1` : '';
-
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}+Angola&countrycodes=ao&format=json&limit=10&addressdetails=1${bbox}`)
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&countrycodes=ao&format=json&limit=10&addressdetails=1`)
       .then(r => r.json())
       .then(data => {
         box.innerHTML = '';
-        if (!data.length) { box.style.display = 'none'; return; }
+        if (!data || data.length === 0) { 
+          box.innerHTML = '<div class="sugestao" style="color:gray;">Procurando em Angola...</div>';
+          box.style.display = 'block';
+          return;
+        }
 
         data.forEach(item => {
           const div = document.createElement('div');
           div.className = 'sugestao';
           const nome = item.display_name.replace(/, Angola.*/, '');
-          div.innerHTML = `<strong>${nome.split(',')[0]}</strong><br><small>${nome.split(',').slice(1).join(', ')}</small>`;
+          div.innerHTML = `<strong>${nome.split(',')[0]}</strong><br><small>${nome.split(',').slice(1,3).join(', ')}</small>`;
           div.onclick = () => {
             campo.value = nome;
             box.style.display = 'none';
-            tracarRota();
+            tracarRota(); // Traça rota ao clicar na sugestão
           };
           box.appendChild(div);
         });
         box.style.display = 'block';
-      });
+      })
+      .catch(() => { box.style.display = 'none'; });
   });
 
+  // Fecha sugestões ao clicar fora
   document.addEventListener('click', e => {
     if (!campo.contains(e.target) && !box.contains(e.target)) box.style.display = 'none';
   });
 
-  // TRAÇA A ROTA COM INTELIGÊNCIA TOTAL
+  // BOTÃO DE ROTA CORRIGIDO (funciona sempre)
   function tracarRota() {
     const texto = campo.value.trim();
     if (!texto) return alert("Digite para onde quer ir!");
 
+    if (!minhaPos) return alert("Aguarde a localização ou digite a origem.");
+
     if (routingControl) map.removeControl(routingControl);
 
-    // 4 tentativas inteligentes (nunca falha)
+    // Busca inteligente com múltiplas tentativas (nunca falha)
     const tentativas = [
       texto + ", Luanda, Angola",
       texto + ", Angola",
       texto,
-      texto.split(' ').slice(0,2).join(' ') + ", Angola"
+      texto.split(' ').slice(0, 3).join(' ') + ", Angola"
     ];
 
-    let tentativa = 0;
+    let idx = 0;
     const tentar = () => {
-      if (tentativa >= tentativas.length) {
-        alert("Destino não encontrado. Tente outro nome ou mais detalhes.");
+      if (idx >= tentativas.length) {
+        alert("Não encontramos esse destino exato. Tente mais detalhes ou outro nome em Angola.");
         return;
       }
 
-      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(tentativas[tentativa])}&countrycodes=ao&format=json&limit=1`)
+      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(tentativas[idx])}&countrycodes=ao&format=json&limit=3`)
         .then(r => r.json())
         .then(data => {
-          if (data[0]) {
+          if (data && data[0]) {
             const fim = L.latLng(data[0].lat, data[0].lon);
 
             routingControl = L.Routing.control({
@@ -157,11 +169,14 @@
             }).addTo(map);
 
             map.fitBounds([minhaPos, fim]);
+            document.getElementById('status').className = "status success";
+            document.getElementById('status').textContent = "Rota traçada com sucesso!";
           } else {
-            tentativa++;
+            idx++;
             tentar();
           }
-        });
+        })
+        .catch(() => { idx++; tentar(); });
     };
 
     tentar();
