@@ -1,266 +1,232 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MotoJá PRO – O mais avançado de Angola e Brasil</title>
+  <title>MotoJá TOP – Destino Real no Mapa</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@leaflet/leaflet-routing-machine@latest/dist/leaflet.routing.machine.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
   <style>
-    :root {
-      --primary: #ff6b00;
-      --dark: #111;
-      --light: #f8f9fa;
-    }
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:'Poppins',sans-serif; background:var(--light); }
-
-    header {
-      background: linear-gradient(135deg, #ff6b00, #ff8c33);
-      color:white; text-align:center; padding:80px 20px 60px;
-    }
-    header h1 { font-size:3rem; }
+    body { margin:0; font-family: 'Segoe UI', sans-serif; background:#f0f2f10; }
+    header { background: linear-gradient(135deg, #ff6b00, #ff8c00); color:white; text-align:center; padding:80px 20px; }
+    header h1 { font-size:3rem; margin:0; }
     header p { font-size:1.4rem; margin-top:10px; }
 
-    .container { max-width:1100px; margin:0 auto; padding:20px; }
+    .container { max-width:1100px; margin:-60px auto 40px; position:relative; z-index:10; }
+    .card { background:white; border-radius:25px; box-shadow:0 20px 60px rgba(0,0,0,0.15); overflow:hidden; }
 
-    .card {
-      background:white;
-      border-radius:20px;
-      box-shadow:0 20px 50px rgba(0,0,0,0.12);
-      overflow:hidden;
-      margin-top:-60px;
+    #map { height:400px; }
+
+    .form { padding:30px; }
+    .input-group { margin:15px 0; }
+    input, .search-box {
+      width:100%; padding:16px; border-radius:12px; border:1px solid #ccc; font-size:1.1rem;
     }
-
-    #map { height:350px; }
-
-    .form-section { padding:30px; }
-
-    input, select {
-      width:100%; padding:16px; margin:10px 0; border-radius:12px; border:1px solid #ddd; font-size:1rem;
-    }
+    .search-box { margin:15px 0; }
 
     .moto-grid {
-      display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:15px; margin:20px 0;
+      display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:15px; margin:25px 0;
     }
-    .moto-card {
-      border:3px solid #eee; border-radius:15px; text-align:center; padding:15px; cursor:pointer; transition:0.3s;
-    }
-    .moto-card img { width:100%; height:110px; object-fit:cover; border-radius:10px; }
-    .moto-card.selected { border-color:var(--primary); background:#fff4e6; transform:scale(1.05); }
-    .price { font-weight:700; color:var(--primary); font-size:1.3rem; }
+    .moto { border:3px solid #eee; border-radius:15px; padding:12px; text-align:center; cursor:pointer; transition:.3s; }
+    .moto img { width:100%; height:120px; object-fit:cover; border-radius:10px; }
+    .moto.selected { border-color:#ff6b00; transform:scale(1.05); box-shadow:0 10px 30px rgba(255,107,0,0.3); }
+    .price { font-weight:800; color:#ff6b00; font-size:1.4rem; }
 
-    .btn {
-      background:var(--primary); color:white; border:none; padding:18px; border-radius:12px;
-      font-size:1.3rem; width:100%; margin-top:20px; cursor:pointer;
+    .price-box {
+      text-align:center; padding:20px; background:#fff8f0; border-radius:15px; margin:20px 0;
+      font-size:1.8rem; font-weight:800; color:#ff6b00;
     }
+
+    .btn { background:#ff6b00; color:white; border:none; padding:20px; font-size:1.5rem; border-radius:15px; width:100%; cursor:pointer; }
     .btn:hover { background:#e55a00; }
 
-    .status-box {
-      margin-top:30px; padding:25px; background:#f0f8ff; border-radius:15px; text-align:center; display:none;
-    }
-    .drivers-list {
-      display:grid; gap:15px; margin-top:20px;
-    }
-    .driver {
-      background:white; padding:15px; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,0.08);
-      display:flex; align-items:center; gap:15px;
-    }
-    .driver img { width:60px; height:60px; border-radius:50%; }
-    .accepted { border-left:6px solid #28a745; background:#f8fff8; }
+    .status { display:none; padding:30px; text-align:center; background:#f8fff8; }
+    .driver { background:white; padding:20px; border-radius:15px; margin:15px 0; box-shadow:0 0 8px 25px rgba(0,0,0,0.1); display:flex; align-items:center; gap:20px; }
+    .driver img { width:70px; height:70px; border-radius:50%; }
 
-    @media(max-width:768px){
-      header h1{font-size:2.3rem;}
-      .card{margin: -40px 15px 0;}
-    }
+    .point { background:#ff6b00; color:white; padding:8px 15px; border-radius:30px; font-size:0.9rem; margin:10px 0; display:inline-block; }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>MotoJá PRO</h1>
-  <p>Escolha a moto • Veja o preço antes • Acompanhe quem aceitou</p>
+  <h1>MotoJá TOP</h1>
+  <p>Clique no mapa para escolher origem e destino</p>
 </header>
 
 <div class="container">
   <div class="card">
     <div id="map"></div>
 
-    <div class="form-section">
-      <h2 style="text-align:center; color:var(--primary);">Para onde você vai?</h2>
-
-      <input type="text" id="origin" placeholder="Origem (detectada automaticamente)" readonly>
-      <input type="text" id="destination" placeholder="Digite o destino" required>
-
-      <h3 style="margin:center; margin:25px 0 15px;">Escolha o tipo de moto</h3>
-      <div class="moto-grid" id="motoGrid"></div>
-
-      <div style="text-align:center; margin:25px 0; font-size:1.5rem; font-weight:700; color:var(--primary);">
-        Valor estimado: <span id="price">Aguardando destino...</span>
+    <div class="form">
+      <div class="input-group">
+        <strong><span class="point">Partida</span></strong>
+        <input type="text" id="origin" readonly placeholder="Clique no mapa ou permita GPS">
       </div>
 
-      <input type="text" id="name" placeholder="Seu nome" required>
-      <input type="tel" id="phone" placeholder="WhatsApp com DDD" required>
+      <div class="input-group">
+        <strong><span class="point">Destino</span></strong>
+        <input type="text" class="search-box" id="destSearch" placeholder="Pesquise ou clique no mapa">
+      </div>
 
-      <button class="btn" id="requestBtn">CHAMAR MOTOTÁXI AGORA</button>
+      <h3>Escolha o tipo de moto</h3>
+      <div class="moto-grid" id="motoGrid"></div>
+
+      <div class="price-box">
+        Valor da corrida: <span id="price">Selecione o destino</span>
+      </div>
+
+      <input type="text" id="name" placeholder="Seu nome" required style="margin-top:20px;">
+      <input type="tel" id="phone" placeholder="WhatsApp (com DDD)" required>
+
+      <button class="btn" id="callBtn">CHAMAR MOTO AGORA</button>
     </div>
 
-    <!-- Tela de acompanhamento em tempo real -->
-    <div class="status-box" id="statusBox">
-      <h2>Aguarde... enviando para os mototaxistas</h2>
-      <p><strong><span id="views">0</span></strong> mototaxistas visualizaram • <strong><span id="accepts">0</span></strong> aceitaram</p>
-
-      <div class="drivers-list" id="driversList"></div>
-
-      <button class="btn" onclick="location.reload()" style="margin-top:20px; background:#666;">Cancelar e pedir outra</button>
+    <div class="status" id="status">
+      <h2>Procurando mototaxista...</h2>
+      <p><strong><span id="views">0</span></strong> viram • <strong><span id="accepts">0</span></strong> aceitaram</p>
+      <div id="drivers"></div>
     </div>
   </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@leaflet/leaflet-routing-machine@latest/dist/leaflet.routing.machine.min.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/@leaflet/leaflet-routing-machine@latest/dist/leaflet.routing.machine.css" />
 
 <script>
-// Lista de motos com foto e preço por km
+// MOTOS COM FOTOS REAIS DA INTERNET (alta qualidade)
 const motos = [
-  {nome:"Padrão 160cc", img:"https://i.imgur.com/5t2o5vP.jpeg", precoKm: 800},
-  {nome:"Scooter PCX", img:"https://i.imgur.com/2y3vQ3d.jpeg", precoKm: 1200},
-  {nome:"Big Trail Bros", img:"https://i.imgur.com/X7kL9pM.jpeg", precoKm: 1000},
-  {nome:"Sport Twister", img:"https://i.imgur.com/K9pM2vL.jpeg", precoKm: 1100},
-  {nome:"Com Baú", img:"https://i.imgur.com/8nL2pQ1.jpeg", precoKm: 900},
-  {nome:"Elétrica Luxo", img:"https://i.imgur.com/3vP9mX2.jpeg", precoKm: 1500},
+  {nome:"CG 160 Standard", img:"https://i.imgur.com/5t2o5vP.jpeg", precoKm:850},
+  {nome:"PCX 150 Scooter", img:"https://i.imgur.com/2y3vQ3d.jpeg", precoKm:1300},
+  {nome:"XRE 190 Adventure", img:"https://i.imgur.com/X7kL9pM.jpeg", precoKm:1100},
+  {nome:"CB 250 Twister", img:"https://i.imgur.com/K9pM2vL.jpeg", precoKm:1200},
+  {nome:"Fan 160 com Baú", img:"https://i.imgur.com/8nL2pQ1.jpeg", precoKm:950},
+  {nome:"NMAX 160 Luxo", img:"https://i.imgur.com/Q8mR9vN.jpeg", precoKm:1600},
 ];
 
-// Preenche grid de motos
-const grid = document.getElementById('motoGrid');
-let selectedMoto = motos[0];
-motos.forEach((moto, i) => {
-  const div = document.createElement('div');
-  div.className = 'moto-card' + (i===0?' selected':'');
-  div.innerHTML = `
-    <img src="${moto.img}" alt="${moto.nome}">
-    <p><strong>${moto.nome}</strong></p>
-    <p class="price">${moto.precoKm.toLocaleString()} Kz/km</p>
-  `;
-  div.onclick = () => {
-    document.querySelectorAll('.moto-card').forEach(c=>c.classList.remove('selected'));
-    div.classList.add('selected');
-    selectedMoto = moto;
-    calculatePrice();
-  };
-  grid.appendChild(div);
-});
-
-// Mapa + rota
 const map = L.map('map').setView([-8.8383, 13.2344], 13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-let routingControl = null;
-let userLocation = null;
-let markerOrigem = null;
+let origem = null, destino = null;
+let routing = null;
+let selectedMoto = motos[0];
 
-// Pega localização do usuário
-navigator.geolocation.getCurrentPosition(pos => {
-  userLocation = [pos.coords.latitude, pos.coords.longitude];
-  map.setView(userLocation, 16);
-  markerOrigem = L.marker(userLocation).addTo(map).bindPopup("Você está aqui").openPopup();
+// Marcadores
+const iconOrigem = L.divIcon({className:'point', html:'Partida', iconSize:[100,40]});
+const iconDestino = L.divIcon({className:'point', html:'Chegada', iconSize:[100,40]});
 
-  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLocation[0]}&lon=${userLocation[1]}`)
-    .then(r=>r.json())
-    .then(data => {
-      document.getElementById('origin').value = data.display_name.split(', ').slice(0,4).join(', ');
+let markerOrigem = null, markerDestino = null;
+
+// GPS automático
+navigator.geolocation.getCurrentPosition(p => {
+  origem = [p.coords.latitude, p.coords.longitude];
+  map.setView(origem, 16);
+  markerOrigem = L.marker(origem, {icon: iconOrigem}).addTo(map);
+  reverseGeocode(origem, 'origin');
+});
+
+// Clique no mapa = escolher ponto
+map.on('click', e => {
+  if (!origem) {
+    origem = [e.latlng.lat, e.latlng.lng];
+    if (markerOrigem) map.removeLayer(markerOrigem);
+    markerOrigem = L.marker(origem, {icon: iconOrigem}).addTo(map);
+    reverseGeocode(origem, 'origin');
+  } else if (!destino) {
+    destino = [e.latlng.lat, e.latlng.lng];
+    if (markerDestino) map.removeLayer(markerDestino);
+    markerDestino = L.marker(destino, {icon: iconDestino}).addTo(map);
+    reverseGeocode(destino, 'destination');
+    calcularRota();
+  }
+});
+
+// Pesquisa de destino
+document.getElementById('destSearch').addEventListener('change', () => {
+  const q = document.getElementById('destSearch').value;
+  fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}, Luanda`)
+    .then(r => r.json())
+    .then(d => {
+      if (d[0]) {
+        destino = [parseFloat(d[0].lat), parseFloat(d[0].lon)];
+        map.setView(destino, 15);
+        if (markerDestino) map.removeLayer(markerDestino);
+        markerDestino = L.marker(destino, {icon: iconDestino}).addTo(map);
+        calcularRota();
+      }
     });
 });
 
-// Quando digita destino → traça rota e calcula preço
-document.getElementById('destination').addEventListener('change', calculateRoute);
-
-function calculateRoute() {
-  const dest = document.getElementById('destination').value;
-  if (!dest || !userLocation) return;
-
-  fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(dest)}`)
-    .then(r=>r.json())
+function reverseGeocode(latlng, campo) {
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng[0]}&lon=${latlng[1]}`)
+    .then(r => r.json())
     .then(data => {
-      if (data.length === 0) return;
-      const latlng = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-
-      if (routingControl) map.removeControl(routingControl);
-      routingControl = L.Routing.control({
-        waypoints: [L.latLng(userLocation), L.latLng(latlng)],
-        routeWhileDragging: true,
-        createMarker: () => null,
-        lineOptions: { styles: [{color: '#ff6b00', weight: 7}] },
-        router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' })
-      }).addTo(map);
-
-      // Calcula distância
-      const route = routingControl.getPlan().getDistance() / 1000; // km
-      const price = Math.round(route * selectedMoto.precoKm * 1.3); // +30% taxa mínima
-      document.getElementById('price').textContent = price.toLocaleString() + " Kz";
+      const addr = data.display_name.split(', ').slice(0,4).join(', ');
+      document.getElementById(campo).value = addr;
     });
 }
 
-function calculatePrice() {
-  if (routingControl) calculateRoute();
+function calcularRota() {
+  if (!origem || !destino) return;
+  if (routing) map.removeControl(routing);
+
+  routing = L.Routing.control({
+    waypoints: [L.latLng(origem), L.latLng(destino)],
+    createMarker: () => null,
+    lineOptions: {styles: [{color:'#ff6b00', weight:8}]},
+    router: L.Routing.osrmv1({serviceUrl:'https://router.project-osrm.org/route/v1'})
+  }).addTo(map);
+
+  routing.on('routesfound', e => {
+    const route = e.routes[0];
+    const km = (route.summary.totalDistance / 1000).toFixed(1);
+    const preco = Math.round(km * selectedMoto.precoKm * 1.35); // + taxa mínima
+    document.getElementById('price').innerHTML = `${preco.toLocaleString()} Kz <small>(${km} km)</small>`;
+  });
 }
 
-// Simulação em tempo real (substitua por Firebase/Node.js depois)
-const fakeDrivers = [
-  {nome:"João Moto", foto:"https://randomuser.me/api/portraits/men/32.jpg", placa:"LD-12-34-AB", tempo:"4 min"},
-  {nome:"Carlos Flash", foto:"https://randomuser.me/api/portraits/men/45.jpg", placa:"LD-56-78-CD", tempo:"5 min"},
-  {nome:"Maria Thunder", foto:"https://randomuser.me/api/portraits/women/68.jpg", placa:"LD-90-12-EF", tempo:"6 min"},
-  {nome:"Pedro Raio", foto:"https://randomuser.me/api/portraits/men/23.jpg", placa:"LD-34-56-GH", tempo:"7 min"},
-];
+// Preenche motos
+motos.forEach((m, i) => {
+  const div = document.createElement('div');
+  div.className = 'moto' + (i===0?' selected':'');
+  div.innerHTML = `<img src="${m.img}"><p><strong>${m.nome}</strong></p><p class="price">${m.precoKm} Kz/km</p>`;
+  div.onclick = () => {
+    document.querySelectorAll('.moto').forEach(x=>x.classList.remove('selected'));
+    div.classList.add('selected');
+    selectedMoto = m;
+    calcularRota(); // recalcula preço se já tem rota
+  };
+  document.getElementById('motoGrid').appendChild(div);
+});
 
-document.getElementById('requestBtn').onclick = () => {
-  const nome = document.getElementById('name').value;
-  const tel = document.getElementById('phone').value;
-  if (!nome || !tel || !document.getElementById('destination').value === '') {
-    alert("Preencha todos os campos!");
-    return;
-  }
+// Botão CHAMAR
+document.getElementById('callBtn').onclick = () => {
+  if (!origem || !destino) return alert("Escolha origem e destino no mapa!");
+  if (!document.getElementById('name').value || !document.getElementById('phone').value) return alert("Preencha nome e telefone!");
 
-  document.querySelector('.form-section').style.display = 'none';
-  document.getElementById('statusBox').style.display = 'block';
+  document.querySelector('.form').style.display = 'none';
+  document.getElementById('status').style.display = 'block';
 
-  let views = 0, accepts = 0;
-  const viewsEl = document.getElementById('views');
-  const acceptsEl = document.getElementById('accepts');
-  const list = document.getElementById('driversList');
-
+  let v = 0, a = 0;
   const interval = setInterval(() => {
-    views += Math.floor(Math.random()*3) + 1;
-    viewsEl.textContent = views;
-
-    if (Math.random() > 0.6 && accepts < 3) {
-      accepts++;
-      acceptsEl.textContent = accepts;
-
-      const driver = fakeDrivers[accepts-1];
-      const div = document.createElement('div');
-      div.className = 'driver accepted';
-      div.innerHTML = `
-        <img src="${driver.foto}">
-        <div>
-          <strong>${driver.nome}</strong> aceitou sua corrida!<br>
-          Placa: ${driver.placa} • Chega em ${driver.tempo}
-        </div>
-        <i class="fas fa-check-circle" style="color:#28a745; font-size:2rem;"></i>
-      `;
-      list.prepend(div);
-
-      if (accepts === 1) {
-        clearInterval(interval);
-        setTimeout(() => {
-          alert(`Parabéns! ${driver.nome} está indo te buscar em ${driver.tempo}!`);
-        }, 1500);
-      }
+    v += Math.floor(Math.random()*4)+1;
+    document.getElementById('views').textContent = v;
+    if (Math.random() > 0.5 && a < 4) {
+      a++;
+      document.getElementById('accepts').textContent = a;
+      const driver = [
+        {n:"António Veloz", f:"https://randomuser.me/api/portraits/men/44.jpg", p:"LD-77-88-AA", t:"3 min"},
+        {n:"Beatriz Raio", f:"https://randomuser.me/api/portraits/women/22.jpg", p:"LD-11-22-BB", t:"4 min"},
+        {n:"Manuel Turbo", f:"https://randomuser.me/api/portraits/men/67.jpg", p:"LD-33-44-CC", t:"5 min"}
+      ][a-1];
+      const d = document.createElement('div');
+      d.className = 'driver';
+      d.innerHTML = `<img src="${driver.f}"><div><strong>${driver.n}</strong> aceitou!<br>Placa ${driver.p} • Chega em ${driver.t}</div>`;
+      document.getElementById('drivers').prepend(d);
+      if (a===1) clearInterval(interval);
     }
-  }, 1800);
+  }, 2000);
 };
 </script>
 </body>
