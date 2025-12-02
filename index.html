@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contigo na Via - Mototáxi App</title>
+    
+    <link rel="manifest" href="manifest.json"> 
+    
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <link rel="stylesheet" href="style-app.css">
+    
+    <script>
+        let map; // Variável global para a instância do mapa
+        
+        // Função chamada pelo Google Maps API ao carregar
+        function initMap() {
+            const defaultLocation = { lat: -23.5505, lng: -46.6333 }; // São Paulo (Exemplo)
+
+            map = new google.maps.Map(document.getElementById('map-simulation'), {
+                center: defaultLocation,
+                zoom: 12,
+                disableDefaultUI: true, 
+            });
+            
+            // Tenta obter a localização real e iniciar os serviços
+            getCurrentLocation(); 
+        }
+    </script>
+</head>
+
+<body>
+
+    <div id="app-container">
+
+        <header class="app-header">
+            <span id="menu-icon" class="material-symbols-outlined">menu</span>
+            <h1 class="app-title">Contigo na Via</h1>
+            <span id="profile-icon" class="material-symbols-outlined">person</span>
+        </header>
+
+        <main id="main-screen">
+            <div id="map-simulation">
+                </div>
+
+            <div id="search-overlay" class="overlay active">
+                <div class="input-container">
+                    <span class="material-symbols-outlined icon-pin">fiber_manual_record</span>
+                    <input type="text" id="input-origem" value="Carregando sua Localização..." readonly>
+                </div>
+                <div class="input-container">
+                    <span class="material-symbols-outlined icon-pin-end">location_on</span>
+                    <input type="text" id="input-destino" placeholder="Para onde vamos, Contigo na Via?">
+                </div>
+
+                <button id="btn-chamar" class="primary-button">
+                    <span class="material-symbols-outlined">motorcycle</span> Ver Preço & Chamar
+                </button>
+            </div>
+
+            <div id="confirmation-overlay" class="overlay hidden">
+                <h3>Detalhes da Corrida</h3>
+                <p>De: <strong id="detalhe-origem"></strong></p>
+                <p>Para: <strong id="detalhe-destino"></strong></p>
+                <h2 class="price-estimate">R$ 0,00</h2>
+                
+                <div class="payment-options">
+                    <span class="material-symbols-outlined">payments</span> PIX / Dinheiro / Cartão
+                </div>
+
+                <button id="btn-confirmar" class="primary-button">
+                    Confirmar e Chamar Motorista
+                </button>
+                <button id="btn-cancelar" class="secondary-button">
+                    Cancelar
+                </button>
+            </div>
+
+        </main>
+    </div>
+
+    <script async
+        src="https://maps.googleapis.com/maps/api/js?key=SUA_CHAVE_API_AQUI&libraries=places&callback=initMap">
+    </script>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
