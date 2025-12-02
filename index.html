@@ -5,78 +5,71 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Contigo na Via – Sua rota em 3 segundos</title>
   <meta name="theme-color" content="#1a73e8">
-  <link rel="manifest" href="data:application/manifest+json,{
-    \"name\":\"Contigo na Via\",
-    \"short_name\":\"Contigo\",
-    \"start_url\":\".\",
-    \"display\":\"standalone\",
-    \"background_color\":\"#1a73e8\",
-    \"theme_color\":\"#1a73e8\",
-    \"icons\":[{\"src\":\"https://joseizataquinvula.github.io/contigo-na-via/icon.png\",\"sizes\":\"192x192\",\"type\":\"image/png\"}]
-  }">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; height: 100vh; display:flex; flex-direction:column; }
-    header { background:#1a73e8; color:white; padding:20px; text-align:center; }
-    h1 { font-size:24px; }
-    .content { flex:1; padding:20px; overflow:auto; }
-    label { display:block; margin:15px 0 8px; font-weight:bold; color:#333; }
-    input { width:100%; padding:16px; font-size:18px; border:2px solid #ddd; border-radius:12px; }
-    button { width:100%; padding:18px; margin-top:20px; font-size:20px; background:#34a853; color:white; border:none; border-radius:12px; font-weight:bold; }
-    button:disabled { background:#999; }
-    #map { height:450px; width:100%; margin-top:25px; border-radius:16px; border:3px solid #ddd; }
-    .status { padding:15px; text-align:center; border-radius:12px; margin:15px 0; font-size:18px; font-weight:bold; }
-    .loading { background:#e3f2fd; color:#1565c0; }
-    .success { background:#e8f5e9; color:#2e7d32; }
-    .error { background:#ffebee; color:#c62828; }
-    .info { background:#e8f5e9; padding:15px; border-radius:12px; text-align:center; margin:15px 0; font-size:18px; }
-    .gm-err-container, .gm-style .gm-err-container, .gm-err-message { display:none !important; } /* REMOVE O ERRO DO GOOGLE */
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:system-ui,sans-serif;background:#f0f2f5;height:100vh;display:flex;flex-direction:column}
+    header{background:#1a73e8;color:white;padding:20px;text-align:center}
+    h1{font-size:24px;margin:0}
+    .content{flex:1;padding:20px;overflow:auto}
+    label{display:block;margin:15px 0 8px;font-weight:bold;color:#333}
+    input{width:100%;padding:16px;font-size:18px;border:2px solid #ddd;border-radius:12px}
+    button{width:100%;padding:18px;margin-top:20px;font-size:20px;background:#34a853;color:white;border:none;border-radius:12px;font-weight:bold;cursor:pointer}
+    button:disabled{background:#999;cursor:not-allowed}
+    #map{height:480px;width:100%;margin-top:25px;border-radius:16px;border:3px solid #ddd}
+    .status{padding:15px;text-align:center;border-radius:12px;margin:15px 0;font-size:18px;font-weight:bold}
+    .loading{background:#e3f2fd;color:#1565c0}
+    .success{background:#e8f5e9;color:#2e7d32}
+    .error{background:#ffebee;color:#c62828}
+    .info{background:#e8f5e9;padding:15px;border-radius:12px;text-align:center;margin:15px 0;font-size:18px}
+    .gm-err-container,.gm-style .gm-err-container{display:none!important}
   </style>
 </head>
 <body>
 
-<header>
-  <h1>Contigo na Via</h1>
-</header>
+<header><h1>Contigo na Via</h1></header>
 
 <div class="content">
   <label>Sua localização atual</label>
-  <input type="text" id="origem" readonly placeholder="Buscando você no mapa...">
+  <input type="text" id="origem" readonly placeholder="Procurando você...">
 
-  <div class="status loading" id="status">Procurando sua localização atual...</div>
+  <div class="status loading" id="status">Buscando sua localização...</div>
 
   <label>Para onde você quer ir?</label>
-  <input type="text" id="destino" placeholder="Ex: Shopping, praia, trabalho...">
+  <input type="text" id="destino" placeholder="Ex: Shopping Eldorado, Praia de Copacabana, trabalho...">
 
-  <button onclick="calcularRota()" id="botaoRota" disabled>Traçar Rota Agora</button>
+  <button onclick="calcularRota()" id="botaoRota" disabled>Traçar Rota</button>
 
   <div id="info"></div>
   <div id="map"></div>
 </div>
 
-<!-- Sua chave -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDXdUY1-1VqaKPzSWMnaeAZ_LZy4Cv9QBU&callback=initMap&libraries=places" async defer></script>
 
 <script>
-  let map, directionsService, directionsRenderer;
+  let map, directionsService, directionsRenderer, markerUsuario;
   let minhaPos = null;
 
   function initMap() {
     map = new google.maps.Map(document.getElementById('map'), {
-      zoom: 15,
-      center: { lat: -14.2350, lng: -51.9253 }
+      zoom: 4,
+      center: { lat: -14.2350, lng: -51.9253 },
+      streetViewControl: false
     });
 
     directionsService = new google.maps.DirectionsService();
     directionsRenderer = new google.maps.DirectionsRenderer({
-      suppressMarkers: false,
-      polylineOptions: { strokeColor: "#1a73e8", strokeWeight: 8 }
+      suppressMarkers: true,
+      polylineOptions: { strokeColor: "#1a73e8", strokeWeight: 8, strokeOpacity: 0.9 }
     });
     directionsRenderer.setMap(map);
 
-    new google.maps.places.Autocomplete(document.getElementById('destino'));
+    // Autocomplete no destino
+    new google.maps.places.Autocomplete(document.getElementById('destino'), {
+      fields: ["formatted_address", "geometry", "name"],
+      types: ["geocode", "establishment"]
+    });
 
-    // COMEÇA AUTOMATICAMENTE
+    // Começa a buscar localização automaticamente
     pegarLocalizacao();
   }
 
@@ -94,50 +87,69 @@
       pos => {
         minhaPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
 
+        // ZOOM E CENTRALIZA NO USUÁRIO
+        map.setCenter(minhaPos);
+        map.setZoom(17);  // Zoom bem próximo (rua visível)
+
+        // Marcador azul grande "Você está aqui"
+        if (markerUsuario) markerUsuario.setMap(null);
+        markerUsuario = new google.maps.Marker({
+          position: minhaPos,
+          map: map,
+          title: "Você está aqui",
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 14,
+            fillColor: "#1a73e8",
+            fillOpacity: 1,
+            strokeColor: "#fff",
+            strokeWeight: 5
+          },
+          animation: google.maps.Animation.DROP
+        });
+
+        // Endereço bonito
         const geocoder = new google.maps.Geocoder();
         geocoder.geocode({ location: minhaPos }, (results, st) => {
           document.getElementById('origem').value = results?.[0]?.formatted_address || "Minha localização atual";
         });
 
-        map.setCenter(minhaPos);
-        new google.maps.Marker({
-          position: minhaPos,
-          map: map,
-          title: "Você está aqui",
-          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12, fillColor: "#1a73e8", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 4 }
-        });
-
         status.className = "status success";
-        status.textContent = "Localização encontrada! Digite o destino";
+        status.textContent = "Localização encontrada! Digite seu destino";
         document.getElementById('botaoRota').disabled = false;
       },
       err => {
         status.className = "status error";
         status.innerHTML = err.code === 1 
-          ? "Você bloqueou a localização.<br>Digite o endereço de origem manualmente."
+          ? "Você bloqueou a localização.<br>Pode digitar o endereço manualmente."
           : "Não conseguimos te localizar.";
         ativarManual();
       },
-      { timeout: 15000, enableHighAccuracy: true }
+      { timeout: 15000, enableHighAccuracy: true, maximumAge: 300000 }
     );
   }
 
   function ativarManual() {
     document.getElementById('origem').readOnly = false;
-    document.getElementById('origem').placeholder = "Digite sua rua, bairro ou cidade";
+    document.getElementById('origem').placeholder = "Digite sua rua ou bairro";
     document.getElementById('botaoRota').disabled = false;
   }
 
   function calcularRota() {
-    const destino = document.getElementById('destino').value.trim();
-    if (!destino) return alert("Digite para onde você quer ir!");
+    const destinoInput = document.getElementById('destino').value.trim();
+    if (!destinoInput) return alert("Digite para onde você quer ir!");
 
     const origem = minhaPos || document.getElementById('origem').value;
 
+    if (!origem) return alert("Aguarde sua localização ou digite a origem");
+
+    document.getElementById('info').innerHTML = '<div class="status loading">Traçando a melhor rota...</div>';
+
     directionsService.route({
       origin: origem,
-      destination: destino,
-      travelMode: google.maps.TravelMode.DRIVING
+      destination: destinoInput,
+      travelMode: google.maps.TravelMode.DRIVING,
+      provideRouteAlternatives: false
     }, (result, status) => {
       if (status === 'OK') {
         directionsRenderer.setDirections(result);
@@ -149,7 +161,12 @@
             <strong>${leg.duration.text}</strong>
           </div>`;
       } else {
-        document.getElementById('info').innerHTML = `<div class="status error">Destino não encontrado. Tente outro endereço.</div>`;
+        // Mesmo se falhar, mantém o mapa no usuário
+        document.getElementById('info').innerHTML = `
+          <div class="status error">
+            Não encontramos esse destino exato.<br>
+            Tente: <strong>"McDonald's", "Posto Ipiranga", "Praia do Canto"</strong> ou nome da rua
+          </div>`;
       }
     });
   }
