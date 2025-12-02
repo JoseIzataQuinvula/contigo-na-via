@@ -3,56 +3,54 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Traçar Rota - Google Maps</title>
+  <title>Minha Localização → Destino</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
-    h1 { color: #333; }
-    .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    .input-group { margin: 15px 0; }
-    label { display: inline-block; width: 120px; font-weight: bold; }
-    input { width: 500px; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; }
+    body { font-family: Arial, sans-serif; margin: 0; background: #f0f2f5; }
+    .container { max-width: 900px; margin: 20px auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    h1 { text-align: center; color: #1a73e8; }
+    .input-group { margin: 20px 0; }
+    label { display: inline-block; width: 130px; font-weight: bold; color: #333; }
+    input { width: 560px; padding: 14px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; }
     button { 
-      padding: 12px 30px; 
-      font-size: 18px; 
-      background: #4285f4; 
-      color: white; 
-      border: none; 
-      border-radius: 5px; 
-      cursor: pointer;
+      padding: 14px 32px; font-size: 18px; background: #1a73e8; color: white; 
+      border: none; border-radius: 8px; cursor: pointer; margin-top: 10px;
     }
-    button:hover { background: #3367d6; }
-    #map { height: 550px; width: 100%; margin-top: 20px; border: 3px solid #ddd; border-radius: 8px; }
-    .info { margin-top: 10px; font-size: 18px; color: #444; }
+    button:hover { background: #1557b0; }
+    #map { height: 560px; width: 100%; margin-top: 20px; border-radius: 12px; border: 3px solid #ddd; }
+    .info { margin: 15px 0; padding: 15px; background: #e8f4fc; border-radius: 8px; font-size: 18px; }
+    .status { margin: 10px 0; font-weight: bold; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>Traçar Rota no Mapa</h1>
+  <h1>Rota da Minha Localização até o Destino</h1>
 
   <div class="input-group">
     <label>Origem:</label>
-    <input type="text" id="origem" placeholder="Ex: Avenida Paulista, São Paulo" value="São Paulo, SP">
+    <input type="text" id="origem" placeholder="Buscando sua localização..." readonly>
+    <div class="status" id="status">Clique em "Usar minha localização" para começar</div>
   </div>
 
   <div class="input-group">
     <label>Destino:</label>
-    <input type="text" id="destino" placeholder="Ex: Cristo Redentor, Rio de Janeiro" value="Rio de Janeiro, RJ">
+    <input type="text" id="destino" placeholder="Ex: Shopping Eldorado, São Paulo">
   </div>
 
-  <button onclick="calcularRota()">Traçar Rota</button>
-  <div class="info" id="info"></div>
+  <button onclick="pegarLocalizacao()">Usar minha localização atual</button>
+  <button onclick="calcularRota()" style="margin-left:10px; background:#34a853;">Traçar Rota</button>
 
+  <div class="info" id="info"></div>
   <div id="map"></div>
 </div>
 
-<!-- Sua chave já inserida -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDXdUY1-1VqaKPzSWMnaeAZ_LZy4Cv9QBU&callback=initMap&libraries=places" async defer></script>
 
 <script>
   let map;
   let directionsService;
   let directionsRenderer;
+  let minhaPosicao = null;
 
   function initMap() {
     map = new google.maps.Map(document.getElementById('map'), {
@@ -62,45 +60,92 @@
 
     directionsService = new google.maps.DirectionsService();
     directionsRenderer = new google.maps.DirectionsRenderer({
-      suppressMarkers: false,
-      polylineOptions: { strokeColor: "#4285f4", strokeWeight: 6 }
+      polylineOptions: { strokeColor: "#1a73e8", strokeWeight: 7 }
     });
     directionsRenderer.setMap(map);
 
-    // Autocomplete nos campos (muito mais fácil de usar)
-    new google.maps.places.Autocomplete(document.getElementById('origem'));
+    // Autocomplete só no destino
     new google.maps.places.Autocomplete(document.getElementById('destino'));
   }
 
-  function calcularRota() {
-    const origem = document.getElementById('origem').value;
-    const destino = document.getElementById('destino').value;
+  // PEGA A LOCALIZAÇÃO ATUAL DO USUÁRIO
+  function pegarLocalizacao() {
+    const status = document.getElementById('status');
+    status.style.color = "#e67e22";
+    status.textContent = "Buscando sua localização...";
 
-    if (!origem || !destino) {
-      alert("Por favor, preencha origem e destino!");
+    if (!navigator.geolocation) {
+      status.style.color = "red";
+      status.textContent = "Seu navegador não suporta geolocalização";
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        minhaPosicao = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+
+        // Converte coordenadas em endereço legível (opcional)
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ location: minhaPosicao }, (results, status) => {
+          if (status === "OK" && results[0]) {
+            document.getElementById('origem').value = results[0].formatted_address;
+          } else {
+            document.getElementById('origem').value = `${minhaPosicao.lat.toFixed(6)}, ${minhaPosicao.lng.toFixed(6)}`;
+          }
+        });
+
+        status.style.color = "green";
+        status.textContent = "Localização capturada com sucesso!";
+        
+        // Centraliza o mapa na posição do usuário
+        map.setCenter(minhaPosicao);
+        map.setZoom(15);
+      },
+      (erro) => {
+        status.style.color = "red";
+        if (erro.code === 1) status.textContent = "Você negou a permissão de localização";
+        else if (erro.code === 2) status.textContent = "Não foi possível obter sua localização";
+        else status.textContent = "Erro na geolocalização";
+        
+        document.getElementById('origem').readOnly = false;
+        document.getElementById('origem').placeholder = "Digite a origem manualmente";
+      },
+      { timeout: 10000 }
+    );
+  }
+
+  // CALCULA A ROTA
+  function calcularRota() {
+    const destino = document.getElementById('destino').value;
+    if (!destino) {
+      alert("Digite o destino!");
+      return;
+    }
+    if (!minhaPosicao && !document.getElementById('origem').value) {
+      alert("Primeiro clique em 'Usar minha localização atual'");
       return;
     }
 
     const request = {
-      origin: origem,
+      origin: minhaPosicao || document.getElementById('origem').value,
       destination: destino,
-      travelMode: google.maps.TravelMode.DRIVING,
-      unitSystem: google.maps.UnitSystem.METRIC
+      travelMode: google.maps.TravelMode.DRIVING
     };
 
     directionsService.route(request, (result, status) => {
       if (status === 'OK') {
         directionsRenderer.setDirections(result);
-
-        const rota = result.routes[0].legs[0];
-        const info = `
-          <strong>Rota encontrada!</strong><br>
-          Distância: <strong>${rota.distance.text}</strong><br>
-          Tempo estimado: <strong>${rota.duration.text}</strong>
+        const leg = result.routes[0].legs[0];
+        document.getElementById('info').innerHTML = `
+          <strong>Rota traçada!</strong><br>
+          Distância: <strong>${leg.distance.text}</strong> | 
+          Tempo: <strong>${leg.duration.text}</strong>
         `;
-        document.getElementById('info').innerHTML = info;
       } else {
-        document.getElementById('info').innerHTML = "<span style='color:red;'>Não foi possível traçar a rota. Verifique os endereços.</span>";
+        document.getElementById('info').innerHTML = `<span style="color:red;">Erro: ${status}. Verifique o destino ou tente novamente.</span>`;
       }
     });
   }
