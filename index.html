@@ -1,345 +1,110 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MotoJá Clean • Tela Inteira</title>
-
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/@leaflet/leaflet-routing-machine@latest/dist/leaflet.routing.machine.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
+  <title>Traçar Rota - Google Maps</title>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    html, body { height:100%; font-family:'Segoe UI',sans-serif; background:#f5f5f5; }
-    
-    body {
-      display:flex;
-      flex-direction:column;
-      height:100vh;
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+    h1 { color: #333; }
+    .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    .input-group { margin: 15px 0; }
+    label { display: inline-block; width: 120px; font-weight: bold; }
+    input { width: 500px; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; }
+    button { 
+      padding: 12px 30px; 
+      font-size: 18px; 
+      background: #4285f4; 
+      color: white; 
+      border: none; 
+      border-radius: 5px; 
+      cursor: pointer;
     }
-
-    #map {
-      position:fixed;
-      top:0;
-      top:0;
-      left:0;
-      width:100%;
-      height:100%;
-      z-index:1;
-    }
-
-    .panel {
-      position:fixed;
-      bottom:0;
-      left:0;
-      right:0;
-      background:white;
-      border-radius:28px 28px 0 0;
-      box-shadow:0 -10px 40px rgba(0,0,0,0.15);
-      z-index:10;
-      max-height:90vh;
-      overflow-y:auto;
-      padding:20px 20px 30px;
-    }
-
-    .handle {
-      width:50px;
-      height:5px;
-      background:#ccc;
-      border-radius:10px;
-      margin:10px auto 20px;
-    }
-
-    h1 {
-      text-align:center;
-      color:#ff6b00;
-      font-size:2.2rem;
-      margin-bottom:10px;
-    }
-    .subtitle {
-      text-align:center;
-      color:#555;
-      font-size:1.1rem;
-      margin-bottom:25px;
-    }
-
-    .input-box {
-      position:relative;
-      margin:18px 0;
-    }
-    .input-box i {
-      position:absolute;
-      left:18px;
-      top:18px;
-      color:#ff6b00;
-      font-size:1.3rem;
-      z-index:2;
-    }
-    .input-box input {
-      width:100%;
-      padding:18px 18px 18px 55px;
-      border:2px solid #eee;
-      border-radius:16px;
-      font-size:1.1rem;
-      background:white;
-    }
-    .input-box input:focus {
-      border-color:#ff6b00;
-      outline:none;
-    }
-
-    /* Resultados da busca */
-    .suggestions {
-      position:absolute;
-      top:100%;
-      left:0;
-      right:0;
-      background:white;
-      border-radius:0 0 16px 16px;
-      max-height:250px;
-      overflow-y:auto;
-      box-shadow:0 10px 20px rgba(0,0,0,0.1);
-      display:none;
-      z-index:100;
-    }
-    .sug-item {
-      padding:14px 20px;
-      cursor:pointer;
-      border-bottom:1px solid #f0f0f0;
-    }
-    .sug-item:hover { background:#fff8f0; }
-    .sug-item:last-child { border:none; }
-
-    /* Motos */
-    .motos {
-      display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(150px,1fr));
-      gap:14px;
-      margin:30px 0;
-    }
-    .moto {
-      background:#f9f9f9;
-      border:2px solid #eee;
-      border-radius:16px;
-      padding:18px 10px;
-      text-align:center;
-      cursor:pointer;
-      transition:0.3s;
-    }
-    .moto.selected {
-      background:#fff8f0;
-      border-color:#ff6b00;
-      transform:scale(1.05);
-    }
-    .moto h4 { font-size:1rem; margin:8px 0 4px; }
-    .moto .preco { font-weight:800; color:#ff6b00; font-size:1.3rem; }
-
-    .preco-total {
-      background:#fff8f0;
-      padding:20px;
-      border-radius:16px;
-      text-align:center;
-      font-size:2rem;
-      font-weight:800;
-      color:#ff6b00;
-      margin:25px 0;
-    }
-
-    .btn {
-      background:#ff6b00;
-      color:white;
-      border:none;
-      padding:20px;
-      font-size:1.6rem;
-      font-weight:700;
-      border-radius:18px;
-      width:100%;
-      cursor:pointer;
-      box-shadow:0 8px 25px rgba(255,107,0,0.4);
-    }
-    .btn:disabled {
-      background:#aaa;
-      cursor:not-allowed;
-      box-shadow:none;
-    }
-
-    .status {
-      display:none;
-      text-align:center;
-      padding:40px 20px;
-    }
+    button:hover { background: #3367d6; }
+    #map { height: 550px; width: 100%; margin-top: 20px; border: 3px solid #ddd; border-radius: 8px; }
+    .info { margin-top: 10px; font-size: 18px; color: #444; }
   </style>
 </head>
 <body>
 
-  <div id="map"></div>
+<div class="container">
+  <h1>Traçar Rota no Mapa</h1>
 
-  <div class="panel">
-    <div class="handle"></div>
-    <h1>MotoJá</h1>
-    <p class="subtitle">Mototáxi rápido e barato em Luanda</p>
-
-    <!-- Origem -->
-    <div class="input-box">
-      <i class="fas fa-location-dot"></i>
-      <input type="text" id="origem" placeholder="A minha localização (GPS)">
-      <div class="suggestions" id="origemSug"></div>
-    </div>
-
-    <!-- Destino -->
-    <div class="input-box">
-      <i class="fas fa-flag-checkered"></i>
-      <input type="text" id="destino" placeholder="Para onde vais? (ex: Camama, Talatona…)">
-      <div class="suggestions" id="destinoSug"></div>
-    </div>
-
-    <div class="motos" id="motos"></div>
-
-    <div class="preco-total" id="preco">Selecione o destino</div>
-
-    <input type="text" placeholder="Nome completo" id="nome" style="width:100%;padding:18px;border-radius:16px;border:2px solid #eee;margin:15px 0;font-size:1.1rem;">
-    <input type="tel" placeholder="WhatsApp (com DDD)" id="telefone" style="width:100%;padding:18px;border-radius:16px;border:2px solid #eee;font-size:1.1rem;">
-
-    <button class="btn" id="chamar" disabled>CHAMAR MOTO AGORA</button>
-
-    <div class="status" id="aguardando">
-      <h2>Procurando mototaxista…</h2>
-      <p style="font-size:2rem;margin:30px 0;">
-        <span id="visto">0</span> viram • <span id="aceite">0</span> aceitaram
-      </p>
-      <div id="motorista"></div>
-    </div>
+  <div class="input-group">
+    <label>Origem:</label>
+    <input type="text" id="origem" placeholder="Ex: Avenida Paulista, São Paulo" value="São Paulo, SP">
   </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/@leaflet/leaflet-routing-machine@latest/dist/leaflet.routing.machine.min.js"></script>
+  <div class="input-group">
+    <label>Destino:</label>
+    <input type="text" id="destino" placeholder="Ex: Cristo Redentor, Rio de Janeiro" value="Rio de Janeiro, RJ">
+  </div>
+
+  <button onclick="calcularRota()">Traçar Rota</button>
+  <div class="info" id="info"></div>
+
+  <div id="map"></div>
+</div>
+
+<!-- Sua chave já inserida -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDXdUY1-1VqaKPzSWMnaeAZ_LZy4Cv9QBU&callback=initMap&libraries=places" async defer></script>
 
 <script>
-const map = L.map('map').setView([-8.8383, 13.2344], 13);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  let map;
+  let directionsService;
+  let directionsRenderer;
 
-let origem = null, destino = null;
-let rota = null;
-let motoEscolhida = {nome:"Padrão 160cc", precoKm:850};
-
-const motos = [
-  {nome:"Padrão 160cc", precoKm:850},
-  {nome:"Scooter PCX", precoKm:1300},
-  {nome:"Big Trail XRE", precoKm:1100},
-  {nome:"Sport Twister", precoKm:1200},
-  {nome:"Com Baú", precoKm:950},
-  {nome:"Luxo/Elétrica", precoKm:1600}
-];
-
-// Preenche motos
-const grid = document.getElementById('motos');
-motos.forEach((m,i) => {
-  const el = document.createElement('div');
-  el.className = 'moto' + (i===0?' selected':'');
-  el.innerHTML = `<h4>${m.nome}</h4><div class="preco">${m.precoKm} Kz/km</div>`;
-  el.onclick = () => {
-    document.querySelectorAll('.moto').forEach(x=>x.classList.remove('selected'));
-    el.classList.add('selected');
-    motoEscolhida = m;
-    if (origem && destino) calcularPreco();
-  };
-  grid.appendChild(el);
-});
-
-// GPS automático
-navigator.geolocation.getCurrentPosition(p => {
-  origem = [p.coords.latitude, p.coords.longitude];
-  map.setView(origem, 16);
-  L.marker(origem, {icon: L.divIcon({html:'Partida', className:'text-lg font-bold bg-orange-500 text-white px-4 py-2 rounded-full'})}).addTo(map);
-  reverse(origem, 'origem');
-  verificar();
-});
-
-// Busca inteligente
-function busca(input, sugDiv, isDestino) {
-  const q = input.value.trim();
-  if (q.length < 2) { sugDiv.style.display='none'; return; }
-
-  fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q+", Luanda, Angola")}&limit=6&countrycodes=ao`)
-    .then(r=>r.json())
-    .then(d => {
-      sugDiv.innerHTML = '';
-      d.forEach(item => {
-        const div = document.createElement('div');
-        div.className='sug-item';
-        div.textContent = item.display_name.split(', ').slice(0,3).join(', ');
-        div.onclick = () => {
-          const latlng = [parseFloat(item.lat), parseFloat(item.lon)];
-          if (isDestino) {
-            destino = latlng;
-            L.marker(destino, {icon: L.divIcon({html:'Chegada', className:'text-lg font-bold bg-green-600 text-white px-4 py-2 rounded-full'})}).addTo(map);
-            input.value = item.display_name.split(', ').slice(0,3).join(', ');
-          } else {
-            origem = latlng;
-            map.setView(latlng,16);
-            L.marker(origem, {icon: L.divIcon({html:'Partida', className:'text-lg font-bold bg-orange-500 text-white px-4 py-2 rounded-full'})}).addTo(map);
-            input.value = item.display_name.split(', ').slice(0,3).join(', ');
-          }
-          sugDiv.style.display='none';
-          desenharRota();
-        };
-        sugDiv.appendChild(div);
-      });
-      sugDiv.style.display = d.length?'block':'none';
+  function initMap() {
+    map = new google.maps.Map(document.getElementById('map'), {
+      center: { lat: -14.2350, lng: -51.9253 },
+      zoom: 4
     });
-}
 
-document.getElementById('origem').addEventListener('input', () => busca(document.getElementById('origem'), document.getElementById('origemSug'), false));
-document.getElementById('destino').addEventListener('input', () => busca(document.getElementById('destino'), document.getElementById('destinoSug'), true));
+    directionsService = new google.maps.DirectionsService();
+    directionsRenderer = new google.maps.DirectionsRenderer({
+      suppressMarkers: false,
+      polylineOptions: { strokeColor: "#4285f4", strokeWeight: 6 }
+    });
+    directionsRenderer.setMap(map);
 
-function reverse(latlng, id) {
-  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng[0]}&lon=${latlng[1]}`)
-    .then(r=>r.json())
-    .then(d => document.getElementById(id).value = d.display_name.split(', ').slice(0,4).join(', '));
-}
+    // Autocomplete nos campos (muito mais fácil de usar)
+    new google.maps.places.Autocomplete(document.getElementById('origem'));
+    new google.maps.places.Autocomplete(document.getElementById('destino'));
+  }
 
-function desenharRota() {
-  if (!origem || !destino) return;
-  if (rota) map.removeControl(rota);
+  function calcularRota() {
+    const origem = document.getElementById('origem').value;
+    const destino = document.getElementById('destino').value;
 
-  rota = L.Routing.control({
-    waypoints: [L.latLng(origem), L.latLng(destino)],
-    createMarker:()=>null,
-    lineOptions: {styles:[{color:'#ff6b00',weight:9,opacity:0.9}]},
-    router: L.Routing.osrmv1({serviceUrl:'https://router.project-osrm.org/route/v1'})
-  }).addTo(map);
-
-  rota.on('routesfound', e => {
-    const km = (e.routes[0].summary.totalDistance/1000).toFixed(1);
-    const preco = Math.round(km * motoEscolhida.precoKm * 1.35);
-    document.getElementById('preco').innerHTML = `${preco.toLocaleString()} Kz <small>(${km} km)</small>`;
-    verificar();
-  });
-}
-
-function verificar() {
-  const ok = origem && destino && document.getElementById('nome').value && document.getElementById('telefone').value;
-  document.getElementById('chamar').disabled = !ok;
-}
-
-// Chamar moto
-document.getElementById('chamar').onclick = () => {
-  document.querySelector('.panel > *:not(.status)').forEach(el=>el.style.display='none');
-  document.getElementById('aguardando').style.display='block';
-
-  let v=0, a=0;
-  const int = setInterval(()=>{
-    v += Math.floor(Math.random()*4)+1;
-    document.getElementById('visto').textContent = v;
-    if (Math.random()>0.6 && a===0) {
-      a=1;
-      document.getElementById('aceite').textContent = a;
-      document.getElementById('motorista').innerHTML = `<h2>Mário Veloz aceitou!<br>Placa LD-55-77-CC • Chega em 4 min</h2>`;
-      clearInterval(int);
+    if (!origem || !destino) {
+      alert("Por favor, preencha origem e destino!");
+      return;
     }
-  },1700);
-};
+
+    const request = {
+      origin: origem,
+      destination: destino,
+      travelMode: google.maps.TravelMode.DRIVING,
+      unitSystem: google.maps.UnitSystem.METRIC
+    };
+
+    directionsService.route(request, (result, status) => {
+      if (status === 'OK') {
+        directionsRenderer.setDirections(result);
+
+        const rota = result.routes[0].legs[0];
+        const info = `
+          <strong>Rota encontrada!</strong><br>
+          Distância: <strong>${rota.distance.text}</strong><br>
+          Tempo estimado: <strong>${rota.duration.text}</strong>
+        `;
+        document.getElementById('info').innerHTML = info;
+      } else {
+        document.getElementById('info').innerHTML = "<span style='color:red;'>Não foi possível traçar a rota. Verifique os endereços.</span>";
+      }
+    });
+  }
 </script>
+
 </body>
 </html>
