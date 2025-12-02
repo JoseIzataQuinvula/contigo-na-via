@@ -3,91 +3,121 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MotoJá – Mototáxi na hora</title>
-  <meta name="description" content="Chame mototáxi rápido, seguro e barato na sua cidade!">
+  <title>MotoJá – Mototáxi com Mapa e Escolha da Moto</title>
+  <meta name="description" content="Chame mototáxi com localização em tempo real e escolha o tipo de moto que quiser!">
   
-  <!-- Ícones e fontes -->
+  <!-- Leaflet CSS (mapa leve e gratuito) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: 'Poppins', sans-serif; background: #f8f9fa; color:#333; }
+    body { font-family: 'Poppins', sans-serif; background:#f0f2f5; color:#333; }
     
     header {
-      background: linear-gradient(135deg, #ff6b00, #ff8f00);
+      background: linear-gradient(135deg, #ff6b00, #ff9f43);
       color: white;
       text-align: center;
-      padding: 60px 20px;
+      padding: 70px 20px 50px;
+      box-shadow: 0 4px 20px rgba(255,107,0,0.3);
     }
-    header h1 { font-size: 2.8rem; margin-bottom: 10px; }
-    header p { font-size: 1.2rem; opacity: 0.9; }
+    header h1 { font-size: 3rem; margin-bottom:10px; }
+    header p { font-size:1.3rem; }
 
-    .container { max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
+    .container { max-width:1100px; margin:0 auto; padding:0 20px; }
 
     .card {
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-      padding: 30px;
-      margin-bottom: 30px;
+      background:white;
+      border-radius:20px;
+      box-shadow:0 15px 35px rgba(0,0,0,0.1);
+      overflow:hidden;
+      margin: -50px auto 40px;
+      position:relative;
+      z-index:10;
+      max-width:900px;
     }
 
-    h2 { color: #ff6b00; margin-bottom: 20px; text-align: center; }
-
-    form {
+    .form-grid {
       display: grid;
-      gap: 20px;
+      grid-template-columns: 1fr 1fr;
+      gap: 25px;
+      padding: 35px;
     }
+
+    #map { height: 300px; border-radius: 15px; margin-bottom:20px; }
+
+    h2 { color:#ff6b00; text-align:center; margin-bottom:25px; font-size:1.8rem; }
+
     input, select, button {
-      padding: 14px;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-      font-size: 1rem;
+      width:100%;
+      padding:15px;
+      border-radius:12px;
+      border:1px solid #ddd;
+      font-size:1rem;
     }
     input:focus, select:focus {
-      outline: none;
-      border-color: #ff6b00;
-      box-shadow: 0 0 0 3px rgba(255,107,0,0.2);
+      outline:none;
+      border-color:#ff6b00;
+      box-shadow:0 0 0 4px rgba(255,107,0,0.2);
     }
-    button {
-      background: #ff6b00;
-      color: white;
-      border: none;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 1.2rem;
-      transition: 0.3s;
-    }
-    button:hover { background: #e55a00; transform: translateY(-3px); }
 
-    .features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 25px;
-      margin-top: 40px;
+    .moto-options {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap:12px;
+      margin:15px 0;
     }
-    .feature {
-      text-align: center;
-      padding: 25px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    .moto-btn {
+      padding:12px;
+      text-align:center;
+      border:2px solid #eee;
+      border-radius:12px;
+      cursor:pointer;
+      transition:0.3s;
+      font-weight:500;
     }
-    .feature i { font-size: 3rem; color: #ff6b00; margin-bottom: 15px; }
+    .moto-btn:hover { border-color:#ff6b00; background:#fff4e6; }
+    .moto-btn.selected {
+      border-color:#ff6b00;
+      background:#ff6b00;
+      color:white;
+    }
+
+    button.main-btn {
+      background:#ff6b00;
+      color:white;
+      border:none;
+      font-size:1.3rem;
+      font-weight:600;
+      padding:18px;
+      margin-top:20px;
+      cursor:pointer;
+      transition:0.3s;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+    }
+    button.main-btn:hover {
+      background:#e55a00;
+      transform:translateY(-4px);
+      box-shadow:0 10px 25px rgba(255,107,0,0.4);
+    }
 
     footer {
-      text-align: center;
-      padding: 40px;
-      background: #222;
-      color: #aaa;
-      margin-top: 50px;
+      text-align:center;
+      padding:50px 20px;
+      background:#222;
+      color:#aaa;
+      margin-top:80px;
     }
-    footer a { color: #ff6b00; text-decoration: none; }
+    footer a { color:#ff6b00; text-decoration:none; }
 
     @media (max-width: 768px) {
-      header h1 { font-size: 2.2rem; }
-      .card { padding: 20px; }
+      .form-grid { grid-template-columns:1fr; }
+      header h1 { font-size:2.3rem; }
+      .card { margin: -30px 15px 30px; }
     }
   </style>
 </head>
@@ -95,90 +125,159 @@
 
   <header>
     <h1>MotoJá</h1>
-    <p>Mototáxi rápido, seguro e com o melhor preço da cidade!</p>
+    <p>Localização automática + escolha sua moto preferida!</p>
   </header>
 
   <div class="container">
-
     <div class="card">
-      <h2>Peça sua corrida agora</h2>
-      <form id="rideForm">
-        <input type="text" placeholder="Seu nome completo" required>
-        <input type="tel" placeholder="Seu WhatsApp (com DDD)" required>
-        <input type="text" id="origin" placeholder="Ponto de partida (endereço ou referência)" required>
-        <input type="text" id="destination" placeholder="Destino (endereço ou referência)" required>
-        
-        <select required>
-          <option value="" disabled selected>Quantas pessoas?</option>
-          <option>1 pessoa</option>
-          <option>2 pessoas (moto dupla)</option>
-        </select>
+      <div class="padding">
+        <h2>Onde você está e para onde vai?</h2>
 
-        <button type="submit">
-          <i class="fas fa-motorcycle"></i> Chamar Mototáxi Agora
-        </button>
-      </form>
+        <!-- Mapa -->
+        <div id="map"></div>
 
-      <p style="text-align:center; margin-top:20px; color:#666;">
-        <small>Você receberá o contato do mototaxista em até 2 minutos pelo WhatsApp</small>
-      </p>
+        <form id="rideForm" class="form-grid">
+          <div>
+            <label><i class="fas fa-map-marker-alt"></i> Origem (detectada automaticamente)</label>
+            <input type="text" id="origin" placeholder="Carregando sua localização..." readonly>
+          </div>
+
+          <div>
+            <label><i class="fas fa-flag-checkered"></i> Destino</label>
+            <input type="text" id="destination" placeholder="Para onde você vai?" required>
+          </div>
+
+          <div>
+            <label><i class="fas fa-user"></i> Seu nome</label>
+            <input type="text" id="name" placeholder="Ex: José da Silva" required>
+          </div>
+
+          <div>
+            <label><i class="fas fa-phone"></i> WhatsApp (com DDD)</label>
+            <input type="tel" id="phone" placeholder="Ex: 11999999999" required>
+          </div>
+
+          <div class="full-width" style="grid-column: span 2;">
+            <label><i class="fas fa-motorcycle"></i> Escolha o tipo de moto</label>
+            <div class="moto-options">
+              <div class="moto-btn selected" data-moto="Padrão (150-160cc)">Padrão</div>
+              <div class="moto-btn" data-moto="Scooter (PCX, Elite)">Scooter</div>
+              <div class="moto-btn" data-moto="Big Trail (XRE, Bros)">Big Trail</div>
+              <div class="moto-btn" data-moto="Sport (CB300, Twister)">Sport</div>
+              <div class="moto-btn" data-moto="Com baú">Com Baú</div>
+              <div class="moto-btn" data-moto="Luxo (PCX elétrica)">Luxo</div>
+            </div>
+            <input type="hidden" id="motoType" value="Padrão (150-160cc)">
+          </div>
+
+          <button type="submit" class="main-btn">
+            <i class="fas fa-motorcycle"></i>
+            Chamar Mototáxi Agora
+          </button>
+        </form>
+
+        <p style="text-align:center; margin-top:25px; color:#666;">
+          <small>Você será atendido em até 3 minutos pelo WhatsApp</small>
+        </p>
+      </div>
     </div>
-
-    <div class="features">
-      <div class="feature">
-        <i class="fas fa-bolt"></i>
-        <h3>Rápido</h3>
-        <p>Mototaxista chega em média em 5–10 minutos</p>
-      </div>
-      <div class="feature">
-        <i class="fas fa-shield-alt"></i>
-        <h3>Seguro</h3>
-        <p>Todos os mototaxistas são verificados e usam capacete extra</p>
-      </div>
-      <div class="feature">
-        <i class="fas fa-wallet"></i>
-        <h3>Preço justo</h3>
-        <p>Pague só o combinado, sem taxa surpresa</p>
-      </div>
-    </div>
-
   </div>
 
   <footer>
-    <p>MotoJá © 2025 – Seu mototáxi de confiança</p>
-    <p>
-      <a href="https://wa.me/55SEUNUMERO" target="_blank">Fale conosco pelo WhatsApp</a> • 
-      <a href="mailto:contato@motoja.com.br">contato@motoja.com.br</a>
-    </p>
+    <p>MotoJá © 2025 – O mototáxi mais rápido de Angola e Brasil</p>
+    <p>Desenvolvido com ❤️ para quem não gosta de esperar</p>
   </footer>
 
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Aqui você pode integrar com WhatsApp ou um backend real
+    // Inicializa o mapa
+    const map = L.map('map').setView([-8.8383, 13.2344], 12); // centro em Luanda (mude se quiser outra cidade)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    let userMarker;
+    let userLocation = null;
+
+    // Pega localização do usuário
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(position => {
+        userLocation = [position.coords.latitude, position.coords.longitude];
+        map.setView(userLocation, 15);
+
+        userMarker = L.marker(userLocation).addTo(map)
+          .bindPopup("Você está aqui!")
+          .openPopup();
+
+        // Busca endereço real (reverse geocoding)
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLocation[0]}&lon=${userLocation[1]}`)
+          .then(r => r.json())
+          .then(data => {
+            const address = data.display_name.split(', ').slice(0,4).join(', ');
+            document.getElementById('origin').value = address;
+          })
+          .catch(() => {
+            document.getElementById('origin').value = "Localização detectada (clique no mapa se precisar ajustar)";
+          });
+
+      }, () => {
+        alert("Não foi possível pegar sua localização. Ative o GPS e recarregue a página.");
+        document.getElementById('origin').value = "Localização não permitida";
+      });
+    }
+
+    // Clique no mapa para mudar origem (opcional)
+    map.on('click', e => {
+      if (userMarker) map.removeLayer(userMarker);
+      userLocation = [e.latlng.lat, e.latlng.lng];
+      userMarker = L.marker(userLocation).addTo(map).bindPopup("Nova origem").openPopup();
+
+      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLocation[0]}&lon=${userLocation[1]}`)
+        .then(r => r.json())
+        .then(data => {
+          const addr = data.display_name.split(', ').slice(0,4).join(', ');
+          document.getElementById('origin').value = addr;
+        });
+    });
+
+    // Seleção de moto
+    document.querySelectorAll('.moto-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.moto-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        document.getElementById('motoType').value = btn.dataset.moto;
+      });
+    });
+
+    // Envio do pedido
     document.getElementById('rideForm').addEventListener('submit', function(e) {
       e.preventDefault();
-      
-      const nome = this[0].value;
-      const whatsapp = this[1].value.replace(/\D/g,''); // só números
-      const origem = this[2].value;
-      const destino = this[3].value;
-      const pessoas = this[4].value;
 
-      const mensagem = `Nova corrida!\nNome: ${nome}\nWhatsApp: ${whatsapp}\nDe: ${origem}\nPara: ${destino}\nPessoas: ${pessoas}`;
+      const nome = document.getElementById('name').value;
+      const telefone = document.getElementById('phone').value.replace(/\D/g,'');
+      const origem = document.getElementById('origin').value;
+      const destino = document.getElementById('destination').value;
+      const moto = document.getElementById('motoType').value;
 
-      // Substitua SEUNUMERO pelo número da central ou grupo de mototaxistas
-      const numeroCentral = "55SEUNUMERO"; // ex: 559999999999
+      const texto = `*Nova corrida MotoJá!*\n\n` +
+        `Nome: ${nome}\n` +
+        `WhatsApp: ${telefone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')}\n` +
+        `Moto desejada: ${moto}\n\n` +
+        `De: ${origem}\n` +
+        `Para: ${destino}\n\n` +
+        `${userLocation ? `Link do Maps: https://www.google.com/maps?q=${userLocation[0]},${userLocation[1]}` : ''}`;
 
-      const link = `https://wa.me/${numeroCentral}?text=${encodeURIComponent(mensagem)}`;
+      // TROQUE AQUI pelo número da sua central ou grupo de mototaxistas
+      const numeroCentral = "559999999999"; // exemplo
 
-      // Abre WhatsApp
-      window.open(link, '_blank');
+      const whatsappLink = `https://wa.me/${numeroCentral}?text=${encodeURIComponent(texto)}`;
+      window.open(whatsappLink, '_blank');
 
-      // Feedback para o usuário
-      alert('Sua corrida foi solicitada! Em breve um mototaxista entrará em contato pelo WhatsApp ${whatsapp.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')}.`);
-      
+      alert(`Pronto, ${nome.split(' ')[0]}! Sua moto (${moto}) está a caminho!`);
       this.reset();
+      document.querySelector('.moto-btn').classList.add('selected');
     });
   </script>
-
 </body>
 </html>
