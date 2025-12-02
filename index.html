@@ -3,281 +3,265 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MotoJá – Mototáxi com Mapa e Escolha da Moto</title>
-  <meta name="description" content="Chame mototáxi com localização em tempo real e escolha o tipo de moto que quiser!">
-  
-  <!-- Leaflet CSS (mapa leve e gratuito) -->
+  <title>MotoJá PRO – O mais avançado de Angola e Brasil</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: 'Poppins', sans-serif; background:#f0f2f5; color:#333; }
-    
-    header {
-      background: linear-gradient(135deg, #ff6b00, #ff9f43);
-      color: white;
-      text-align: center;
-      padding: 70px 20px 50px;
-      box-shadow: 0 4px 20px rgba(255,107,0,0.3);
+    :root {
+      --primary: #ff6b00;
+      --dark: #111;
+      --light: #f8f9fa;
     }
-    header h1 { font-size: 3rem; margin-bottom:10px; }
-    header p { font-size:1.3rem; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Poppins',sans-serif; background:var(--light); }
 
-    .container { max-width:1100px; margin:0 auto; padding:0 20px; }
+    header {
+      background: linear-gradient(135deg, #ff6b00, #ff8c33);
+      color:white; text-align:center; padding:80px 20px 60px;
+    }
+    header h1 { font-size:3rem; }
+    header p { font-size:1.4rem; margin-top:10px; }
+
+    .container { max-width:1100px; margin:0 auto; padding:20px; }
 
     .card {
       background:white;
       border-radius:20px;
-      box-shadow:0 15px 35px rgba(0,0,0,0.1);
+      box-shadow:0 20px 50px rgba(0,0,0,0.12);
       overflow:hidden;
-      margin: -50px auto 40px;
-      position:relative;
-      z-index:10;
-      max-width:900px;
+      margin-top:-60px;
     }
 
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 25px;
-      padding: 35px;
+    #map { height:350px; }
+
+    .form-section { padding:30px; }
+
+    input, select {
+      width:100%; padding:16px; margin:10px 0; border-radius:12px; border:1px solid #ddd; font-size:1rem;
     }
 
-    #map { height: 300px; border-radius: 15px; margin-bottom:20px; }
+    .moto-grid {
+      display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:15px; margin:20px 0;
+    }
+    .moto-card {
+      border:3px solid #eee; border-radius:15px; text-align:center; padding:15px; cursor:pointer; transition:0.3s;
+    }
+    .moto-card img { width:100%; height:110px; object-fit:cover; border-radius:10px; }
+    .moto-card.selected { border-color:var(--primary); background:#fff4e6; transform:scale(1.05); }
+    .price { font-weight:700; color:var(--primary); font-size:1.3rem; }
 
-    h2 { color:#ff6b00; text-align:center; margin-bottom:25px; font-size:1.8rem; }
+    .btn {
+      background:var(--primary); color:white; border:none; padding:18px; border-radius:12px;
+      font-size:1.3rem; width:100%; margin-top:20px; cursor:pointer;
+    }
+    .btn:hover { background:#e55a00; }
 
-    input, select, button {
-      width:100%;
-      padding:15px;
-      border-radius:12px;
-      border:1px solid #ddd;
-      font-size:1rem;
+    .status-box {
+      margin-top:30px; padding:25px; background:#f0f8ff; border-radius:15px; text-align:center; display:none;
     }
-    input:focus, select:focus {
-      outline:none;
-      border-color:#ff6b00;
-      box-shadow:0 0 0 4px rgba(255,107,0,0.2);
+    .drivers-list {
+      display:grid; gap:15px; margin-top:20px;
     }
+    .driver {
+      background:white; padding:15px; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,0.08);
+      display:flex; align-items:center; gap:15px;
+    }
+    .driver img { width:60px; height:60px; border-radius:50%; }
+    .accepted { border-left:6px solid #28a745; background:#f8fff8; }
 
-    .moto-options {
-      display:grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap:12px;
-      margin:15px 0;
-    }
-    .moto-btn {
-      padding:12px;
-      text-align:center;
-      border:2px solid #eee;
-      border-radius:12px;
-      cursor:pointer;
-      transition:0.3s;
-      font-weight:500;
-    }
-    .moto-btn:hover { border-color:#ff6b00; background:#fff4e6; }
-    .moto-btn.selected {
-      border-color:#ff6b00;
-      background:#ff6b00;
-      color:white;
-    }
-
-    button.main-btn {
-      background:#ff6b00;
-      color:white;
-      border:none;
-      font-size:1.3rem;
-      font-weight:600;
-      padding:18px;
-      margin-top:20px;
-      cursor:pointer;
-      transition:0.3s;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:10px;
-    }
-    button.main-btn:hover {
-      background:#e55a00;
-      transform:translateY(-4px);
-      box-shadow:0 10px 25px rgba(255,107,0,0.4);
-    }
-
-    footer {
-      text-align:center;
-      padding:50px 20px;
-      background:#222;
-      color:#aaa;
-      margin-top:80px;
-    }
-    footer a { color:#ff6b00; text-decoration:none; }
-
-    @media (max-width: 768px) {
-      .form-grid { grid-template-columns:1fr; }
-      header h1 { font-size:2.3rem; }
-      .card { margin: -30px 15px 30px; }
+    @media(max-width:768px){
+      header h1{font-size:2.3rem;}
+      .card{margin: -40px 15px 0;}
     }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>MotoJá</h1>
-    <p>Localização automática + escolha sua moto preferida!</p>
-  </header>
+<header>
+  <h1>MotoJá PRO</h1>
+  <p>Escolha a moto • Veja o preço antes • Acompanhe quem aceitou</p>
+</header>
 
-  <div class="container">
-    <div class="card">
-      <div class="padding">
-        <h2>Onde você está e para onde vai?</h2>
+<div class="container">
+  <div class="card">
+    <div id="map"></div>
 
-        <!-- Mapa -->
-        <div id="map"></div>
+    <div class="form-section">
+      <h2 style="text-align:center; color:var(--primary);">Para onde você vai?</h2>
 
-        <form id="rideForm" class="form-grid">
-          <div>
-            <label><i class="fas fa-map-marker-alt"></i> Origem (detectada automaticamente)</label>
-            <input type="text" id="origin" placeholder="Carregando sua localização..." readonly>
-          </div>
+      <input type="text" id="origin" placeholder="Origem (detectada automaticamente)" readonly>
+      <input type="text" id="destination" placeholder="Digite o destino" required>
 
-          <div>
-            <label><i class="fas fa-flag-checkered"></i> Destino</label>
-            <input type="text" id="destination" placeholder="Para onde você vai?" required>
-          </div>
+      <h3 style="margin:center; margin:25px 0 15px;">Escolha o tipo de moto</h3>
+      <div class="moto-grid" id="motoGrid"></div>
 
-          <div>
-            <label><i class="fas fa-user"></i> Seu nome</label>
-            <input type="text" id="name" placeholder="Ex: José da Silva" required>
-          </div>
-
-          <div>
-            <label><i class="fas fa-phone"></i> WhatsApp (com DDD)</label>
-            <input type="tel" id="phone" placeholder="Ex: 11999999999" required>
-          </div>
-
-          <div class="full-width" style="grid-column: span 2;">
-            <label><i class="fas fa-motorcycle"></i> Escolha o tipo de moto</label>
-            <div class="moto-options">
-              <div class="moto-btn selected" data-moto="Padrão (150-160cc)">Padrão</div>
-              <div class="moto-btn" data-moto="Scooter (PCX, Elite)">Scooter</div>
-              <div class="moto-btn" data-moto="Big Trail (XRE, Bros)">Big Trail</div>
-              <div class="moto-btn" data-moto="Sport (CB300, Twister)">Sport</div>
-              <div class="moto-btn" data-moto="Com baú">Com Baú</div>
-              <div class="moto-btn" data-moto="Luxo (PCX elétrica)">Luxo</div>
-            </div>
-            <input type="hidden" id="motoType" value="Padrão (150-160cc)">
-          </div>
-
-          <button type="submit" class="main-btn">
-            <i class="fas fa-motorcycle"></i>
-            Chamar Mototáxi Agora
-          </button>
-        </form>
-
-        <p style="text-align:center; margin-top:25px; color:#666;">
-          <small>Você será atendido em até 3 minutos pelo WhatsApp</small>
-        </p>
+      <div style="text-align:center; margin:25px 0; font-size:1.5rem; font-weight:700; color:var(--primary);">
+        Valor estimado: <span id="price">Aguardando destino...</span>
       </div>
+
+      <input type="text" id="name" placeholder="Seu nome" required>
+      <input type="tel" id="phone" placeholder="WhatsApp com DDD" required>
+
+      <button class="btn" id="requestBtn">CHAMAR MOTOTÁXI AGORA</button>
+    </div>
+
+    <!-- Tela de acompanhamento em tempo real -->
+    <div class="status-box" id="statusBox">
+      <h2>Aguarde... enviando para os mototaxistas</h2>
+      <p><strong><span id="views">0</span></strong> mototaxistas visualizaram • <strong><span id="accepts">0</span></strong> aceitaram</p>
+
+      <div class="drivers-list" id="driversList"></div>
+
+      <button class="btn" onclick="location.reload()" style="margin-top:20px; background:#666;">Cancelar e pedir outra</button>
     </div>
   </div>
+</div>
 
-  <footer>
-    <p>MotoJá © 2025 – O mototáxi mais rápido de Angola e Brasil</p>
-    <p>Desenvolvido com ❤️ para quem não gosta de esperar</p>
-  </footer>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@leaflet/leaflet-routing-machine@latest/dist/leaflet.routing.machine.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/@leaflet/leaflet-routing-machine@latest/dist/leaflet.routing.machine.css" />
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    // Inicializa o mapa
-    const map = L.map('map').setView([-8.8383, 13.2344], 12); // centro em Luanda (mude se quiser outra cidade)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+<script>
+// Lista de motos com foto e preço por km
+const motos = [
+  {nome:"Padrão 160cc", img:"https://i.imgur.com/5t2o5vP.jpeg", precoKm: 800},
+  {nome:"Scooter PCX", img:"https://i.imgur.com/2y3vQ3d.jpeg", precoKm: 1200},
+  {nome:"Big Trail Bros", img:"https://i.imgur.com/X7kL9pM.jpeg", precoKm: 1000},
+  {nome:"Sport Twister", img:"https://i.imgur.com/K9pM2vL.jpeg", precoKm: 1100},
+  {nome:"Com Baú", img:"https://i.imgur.com/8nL2pQ1.jpeg", precoKm: 900},
+  {nome:"Elétrica Luxo", img:"https://i.imgur.com/3vP9mX2.jpeg", precoKm: 1500},
+];
 
-    let userMarker;
-    let userLocation = null;
+// Preenche grid de motos
+const grid = document.getElementById('motoGrid');
+let selectedMoto = motos[0];
+motos.forEach((moto, i) => {
+  const div = document.createElement('div');
+  div.className = 'moto-card' + (i===0?' selected':'');
+  div.innerHTML = `
+    <img src="${moto.img}" alt="${moto.nome}">
+    <p><strong>${moto.nome}</strong></p>
+    <p class="price">${moto.precoKm.toLocaleString()} Kz/km</p>
+  `;
+  div.onclick = () => {
+    document.querySelectorAll('.moto-card').forEach(c=>c.classList.remove('selected'));
+    div.classList.add('selected');
+    selectedMoto = moto;
+    calculatePrice();
+  };
+  grid.appendChild(div);
+});
 
-    // Pega localização do usuário
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(position => {
-        userLocation = [position.coords.latitude, position.coords.longitude];
-        map.setView(userLocation, 15);
+// Mapa + rota
+const map = L.map('map').setView([-8.8383, 13.2344], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        userMarker = L.marker(userLocation).addTo(map)
-          .bindPopup("Você está aqui!")
-          .openPopup();
+let routingControl = null;
+let userLocation = null;
+let markerOrigem = null;
 
-        // Busca endereço real (reverse geocoding)
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLocation[0]}&lon=${userLocation[1]}`)
-          .then(r => r.json())
-          .then(data => {
-            const address = data.display_name.split(', ').slice(0,4).join(', ');
-            document.getElementById('origin').value = address;
-          })
-          .catch(() => {
-            document.getElementById('origin').value = "Localização detectada (clique no mapa se precisar ajustar)";
-          });
+// Pega localização do usuário
+navigator.geolocation.getCurrentPosition(pos => {
+  userLocation = [pos.coords.latitude, pos.coords.longitude];
+  map.setView(userLocation, 16);
+  markerOrigem = L.marker(userLocation).addTo(map).bindPopup("Você está aqui").openPopup();
 
-      }, () => {
-        alert("Não foi possível pegar sua localização. Ative o GPS e recarregue a página.");
-        document.getElementById('origin').value = "Localização não permitida";
-      });
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLocation[0]}&lon=${userLocation[1]}`)
+    .then(r=>r.json())
+    .then(data => {
+      document.getElementById('origin').value = data.display_name.split(', ').slice(0,4).join(', ');
+    });
+});
+
+// Quando digita destino → traça rota e calcula preço
+document.getElementById('destination').addEventListener('change', calculateRoute);
+
+function calculateRoute() {
+  const dest = document.getElementById('destination').value;
+  if (!dest || !userLocation) return;
+
+  fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(dest)}`)
+    .then(r=>r.json())
+    .then(data => {
+      if (data.length === 0) return;
+      const latlng = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+
+      if (routingControl) map.removeControl(routingControl);
+      routingControl = L.Routing.control({
+        waypoints: [L.latLng(userLocation), L.latLng(latlng)],
+        routeWhileDragging: true,
+        createMarker: () => null,
+        lineOptions: { styles: [{color: '#ff6b00', weight: 7}] },
+        router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' })
+      }).addTo(map);
+
+      // Calcula distância
+      const route = routingControl.getPlan().getDistance() / 1000; // km
+      const price = Math.round(route * selectedMoto.precoKm * 1.3); // +30% taxa mínima
+      document.getElementById('price').textContent = price.toLocaleString() + " Kz";
+    });
+}
+
+function calculatePrice() {
+  if (routingControl) calculateRoute();
+}
+
+// Simulação em tempo real (substitua por Firebase/Node.js depois)
+const fakeDrivers = [
+  {nome:"João Moto", foto:"https://randomuser.me/api/portraits/men/32.jpg", placa:"LD-12-34-AB", tempo:"4 min"},
+  {nome:"Carlos Flash", foto:"https://randomuser.me/api/portraits/men/45.jpg", placa:"LD-56-78-CD", tempo:"5 min"},
+  {nome:"Maria Thunder", foto:"https://randomuser.me/api/portraits/women/68.jpg", placa:"LD-90-12-EF", tempo:"6 min"},
+  {nome:"Pedro Raio", foto:"https://randomuser.me/api/portraits/men/23.jpg", placa:"LD-34-56-GH", tempo:"7 min"},
+];
+
+document.getElementById('requestBtn').onclick = () => {
+  const nome = document.getElementById('name').value;
+  const tel = document.getElementById('phone').value;
+  if (!nome || !tel || !document.getElementById('destination').value === '') {
+    alert("Preencha todos os campos!");
+    return;
+  }
+
+  document.querySelector('.form-section').style.display = 'none';
+  document.getElementById('statusBox').style.display = 'block';
+
+  let views = 0, accepts = 0;
+  const viewsEl = document.getElementById('views');
+  const acceptsEl = document.getElementById('accepts');
+  const list = document.getElementById('driversList');
+
+  const interval = setInterval(() => {
+    views += Math.floor(Math.random()*3) + 1;
+    viewsEl.textContent = views;
+
+    if (Math.random() > 0.6 && accepts < 3) {
+      accepts++;
+      acceptsEl.textContent = accepts;
+
+      const driver = fakeDrivers[accepts-1];
+      const div = document.createElement('div');
+      div.className = 'driver accepted';
+      div.innerHTML = `
+        <img src="${driver.foto}">
+        <div>
+          <strong>${driver.nome}</strong> aceitou sua corrida!<br>
+          Placa: ${driver.placa} • Chega em ${driver.tempo}
+        </div>
+        <i class="fas fa-check-circle" style="color:#28a745; font-size:2rem;"></i>
+      `;
+      list.prepend(div);
+
+      if (accepts === 1) {
+        clearInterval(interval);
+        setTimeout(() => {
+          alert(`Parabéns! ${driver.nome} está indo te buscar em ${driver.tempo}!`);
+        }, 1500);
+      }
     }
-
-    // Clique no mapa para mudar origem (opcional)
-    map.on('click', e => {
-      if (userMarker) map.removeLayer(userMarker);
-      userLocation = [e.latlng.lat, e.latlng.lng];
-      userMarker = L.marker(userLocation).addTo(map).bindPopup("Nova origem").openPopup();
-
-      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLocation[0]}&lon=${userLocation[1]}`)
-        .then(r => r.json())
-        .then(data => {
-          const addr = data.display_name.split(', ').slice(0,4).join(', ');
-          document.getElementById('origin').value = addr;
-        });
-    });
-
-    // Seleção de moto
-    document.querySelectorAll('.moto-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.moto-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        document.getElementById('motoType').value = btn.dataset.moto;
-      });
-    });
-
-    // Envio do pedido
-    document.getElementById('rideForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-
-      const nome = document.getElementById('name').value;
-      const telefone = document.getElementById('phone').value.replace(/\D/g,'');
-      const origem = document.getElementById('origin').value;
-      const destino = document.getElementById('destination').value;
-      const moto = document.getElementById('motoType').value;
-
-      const texto = `*Nova corrida MotoJá!*\n\n` +
-        `Nome: ${nome}\n` +
-        `WhatsApp: ${telefone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')}\n` +
-        `Moto desejada: ${moto}\n\n` +
-        `De: ${origem}\n` +
-        `Para: ${destino}\n\n` +
-        `${userLocation ? `Link do Maps: https://www.google.com/maps?q=${userLocation[0]},${userLocation[1]}` : ''}`;
-
-      // TROQUE AQUI pelo número da sua central ou grupo de mototaxistas
-      const numeroCentral = "559999999999"; // exemplo
-
-      const whatsappLink = `https://wa.me/${numeroCentral}?text=${encodeURIComponent(texto)}`;
-      window.open(whatsappLink, '_blank');
-
-      alert(`Pronto, ${nome.split(' ')[0]}! Sua moto (${moto}) está a caminho!`);
-      this.reset();
-      document.querySelector('.moto-btn').classList.add('selected');
-    });
-  </script>
+  }, 1800);
+};
+</script>
 </body>
 </html>
