@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-AO">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Contigo na Via – Angola & Mundo</title>
+  <title>Contigo na Via – Angola</title>
   <meta name="theme-color" content="#1a73e8">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet.routing.machine.css" />
@@ -20,23 +20,23 @@
     .status{padding:15px;text-align:center;border-radius:12px;margin:15px 0;font-size:18px;font-weight:bold}
     .success{background:#e8f5e9;color:#2e7d32}
     .error{background:#ffebee;color:#c62828}
-    .sugestoes{position:absolute;background:white;border:1px solid #ccc;border-radius:8px;max-height:250px;overflow-y:auto;z-index:10000;width:92%;margin-top:-8px;box-shadow:0 6px 15px rgba(0,0,0,0.15)}
+    .sugestoes{position:absolute;background:white;border:1px solid #ccc;border-radius:8px;max-height:280px;overflow-y:auto;z-index:10000;width:92%;margin-top:-8px;box-shadow:0 6px 15px rgba(0,0,0,0.15)}
     .sugestao{padding:14px 16px;cursor:pointer;font-size:16px}
     .sugestao:hover{background:#e3f2fd}
   </style>
 </head>
 <body>
 
-<header><h1>Contigo na Via</h1></header>
+<header><h1>Contigo na Via – Angola</h1></header>
 
 <div class="content">
   <label>Sua localização atual</label>
-  <input type="text" id="origem" readonly placeholder="Buscando você...">
-  <div class="status success" id="status">Buscando sua localização...</div>
+  <input type="text" id="origem" readonly placeholder="Buscando você em Angola...">
+  <div class="status success" id="status">Procurando sua localização...</div>
 
   <label>Para onde você quer ir?</label>
   <div style="position:relative">
-    <input type="text" id="destino" placeholder="Ex: Camama, Talatona, Shopping Xyami..." autocomplete="off">
+    <input type="text" id="destino" placeholder="Ex: Camama, Talatona, Kilamba, Viana..." autocomplete="off">
     <div id="sugestoes" class="sugestoes" style="display:none"></div>
   </div>
 
@@ -51,7 +51,7 @@
   let map, routingControl, meuMarcador;
   let minhaPos = null;
 
-  // Mapa centrado em Luanda por padrão
+  // Mapa centrado em Luanda
   map = L.map('map').setView([-8.8383, 13.2344], 11);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
@@ -60,31 +60,31 @@
     minhaPos = [pos.coords.latitude, pos.coords.longitude];
     map.setView(minhaPos, 18);
 
-    // Marcador azul grande com pulsação
     meuMarcador = L.marker(minhaPos, {
       icon: L.divIcon({
         className: "pulsar",
-        html: `<div style="background:#1a73e8;width:24px;height:24px;border-radius:50%;border:5px solid white;box-shadow:0 0 20px #1a73e8;animation:pulse 2s infinite;"></div>`,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17]
+        html: `<div style="background:#1a73e8;width:26px;height:26px;border-radius:50%;border:5px solid white;box-shadow:0 0 20px #1a73e8;animation:pulse 2s infinite;"></div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
       })
     }).addTo(map).bindPopup("<b>Você está aqui!</b>").openPopup();
 
     // Endereço reverso
-    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${minhaPos[0]}&lon=${minhaPos[1]}&format=json`)
+    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${minhaPos[0]}&lon=${minhaPos[1]}&format=json&zoom=18`)
       .then(r => r.json())
       .then(d => {
-        document.getElementById('origem').value = d.display_name.split(',')[0] + (d.display_name.split(',')[1] ? ", " + d.display_name.split(',')[1] : "");
+        const end = d.display_name.split(',').slice(0, 3).join(', ');
+        document.getElementById('origem').value = end;
       });
 
-    document.getElementById('status').textContent = "Localização encontrada!";
+    document.getElementById('status').textContent = "Localização encontrada em Angola!";
   }, () => {
     document.getElementById('status').className = "status error";
-    document.getElementById('status').textContent = "Localização bloqueada. Digite manualmente.";
+    document.getElementById('status').textContent = "Localização bloqueada. Digite o endereço.";
     document.getElementById('origem').readOnly = false;
   });
 
-  // Autocomplete GLOBAL (funciona em Angola, Brasil, Portugal, etc.)
+  // Autocomplete FORÇADO PARA ANGOLA
   const campo = document.getElementById('destino');
   const box = document.getElementById('sugestoes');
 
@@ -92,7 +92,8 @@
     const q = campo.value.trim();
     if (q.length < 2) { box.style.display = 'none'; return; }
 
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=7&addressdetails=1`)
+    // FORÇA ANGOLA nas buscas (countrycodes=ao)
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&countrycodes=ao&format=json&limit=7&addressdetails=1&bounded=1&viewbox=11.5,-19,19,-4`)
       .then(r => r.json())
       .then(data => {
         box.innerHTML = '';
@@ -101,9 +102,10 @@
         data.forEach(item => {
           const div = document.createElement('div');
           div.className = 'sugestao';
-          div.innerHTML = `<strong>${item.display_name.split(',')[0]}</strong><br><small>${item.display_name.split(',').slice(1,4).join(', ')}</small>`;
+          const local = item.display_name.replace(", Angola", "").split(",", 3).join(", ");
+          div.innerHTML = `<strong>${local}</strong><br><small>Angola</small>`;
           div.onclick = () => {
-            campo.value = item.display_name;
+            campo.value = item.display_name.replace(", Angola", "");
             box.style.display = 'none';
             tracarRota();
           };
@@ -113,22 +115,21 @@
       });
   });
 
-  // Fecha ao clicar fora
   document.addEventListener('click', e => {
     if (!campo.contains(e.target) && !box.contains(e.target)) box.style.display = 'none';
   });
 
-  // Traça a rota
+  // Traça rota
   function tracarRota() {
     const destino = campo.value.trim();
     if (!destino) return alert("Digite o destino!");
 
     if (routingControl) map.removeControl(routingControl);
 
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destino)}&format=json&limit=1`)
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destino + ", Angola")}&countrycodes=ao&format=json&limit=1`)
       .then(r => r.json())
       .then(data => {
-        if (!data[0]) return alert("Destino não encontrado. Tente outro nome.");
+        if (!data[0]) return alert("Destino não encontrado em Angola. Tente outro nome.");
 
         const fim = L.latLng(data[0].lat, data[0].lon);
 
@@ -146,7 +147,7 @@
 
   // Animação do marcador
   const css = document.createElement('style');
-  css.innerHTML = `@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(26,115,232,0.8)}70%{box-shadow:0 0 0 25px rgba(26,115,232,0)}100%{box-shadow:0 0 0 0 rgba(26,115,232,0)}}`;
+  css.innerHTML = `@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(26,115,232,0.8)}70%{box-shadow:0 0 0 30px rgba(26,115,232,0)}100%{box-shadow:0 0 0 0 rgba(26,115,232,0)}}`;
   document.head.appendChild(css);
 </script>
 
