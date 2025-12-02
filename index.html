@@ -3,11 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Contigo na Via</title>
+  <title>Contigo na Via – Angola & Mundo</title>
   <meta name="theme-color" content="#1a73e8">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet.routing.machine.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-geosearch@3.0.0/dist/geosearch.css" />
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:system-ui,sans-serif;background:#f0f2f5;height:100vh;display:flex;flex-direction:column}
@@ -21,9 +20,9 @@
     .status{padding:15px;text-align:center;border-radius:12px;margin:15px 0;font-size:18px;font-weight:bold}
     .success{background:#e8f5e9;color:#2e7d32}
     .error{background:#ffebee;color:#c62828}
-    .sugestoes{position:absolute;background:white;border:1px solid #ccc;border-radius:8px;max-height:200px;overflow-y:auto;z-index:1000;width:90%;margin-top:-8px;box-shadow:0 4px 10px rgba(0,0,0,0.1)}
-    .sugestao{padding:12px;cursor:pointer}
-    .sugestao:hover{background:#f0f0f0}
+    .sugestoes{position:absolute;background:white;border:1px solid #ccc;border-radius:8px;max-height:250px;overflow-y:auto;z-index:10000;width:92%;margin-top:-8px;box-shadow:0 6px 15px rgba(0,0,0,0.15)}
+    .sugestao{padding:14px 16px;cursor:pointer;font-size:16px}
+    .sugestao:hover{background:#e3f2fd}
   </style>
 </head>
 <body>
@@ -37,7 +36,7 @@
 
   <label>Para onde você quer ir?</label>
   <div style="position:relative">
-    <input type="text" id="destino" placeholder="Ex: farmácia, shopping, casa da mãe..." autocomplete="off">
+    <input type="text" id="destino" placeholder="Ex: Camama, Talatona, Shopping Xyami..." autocomplete="off">
     <div id="sugestoes" class="sugestoes" style="display:none"></div>
   </div>
 
@@ -47,124 +46,108 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet.routing.machine.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet-geosearch@3.0.0/dist/bundle.min.js"></script>
 
 <script>
   let map, routingControl, meuMarcador;
   let minhaPos = null;
 
-  // Mapa
-  map = L.map('map').setView([-14.2350, -51.9253], 4);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
-  }).addTo(map);
+  // Mapa centrado em Luanda por padrão
+  map = L.map('map').setView([-8.8383, 13.2344], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-  // Pega localização do usuário
+  // Localização do usuário
   navigator.geolocation.getCurrentPosition(pos => {
     minhaPos = [pos.coords.latitude, pos.coords.longitude];
     map.setView(minhaPos, 18);
 
-    // Marcador grande azul piscando
+    // Marcador azul grande com pulsação
     meuMarcador = L.marker(minhaPos, {
       icon: L.divIcon({
-        className: "meu-marcador",
-        html: `<div style="background:#1a73e8;width:20px;height:20px;border-radius:50%;border:4px solid white;box-shadow:0 0 15px #1a73e8;animation:pulse 2s infinite;"></div>`,
-        iconSize: [30, 30],
-        iconAnchor: [15, 15]
+        className: "pulsar",
+        html: `<div style="background:#1a73e8;width:24px;height:24px;border-radius:50%;border:5px solid white;box-shadow:0 0 20px #1a73e8;animation:pulse 2s infinite;"></div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
       })
-    }).addTo(map).bindPopup("Você está aqui!").openPopup();
+    }).addTo(map).bindPopup("<b>Você está aqui!</b>").openPopup();
 
-    // Endereço
+    // Endereço reverso
     fetch(`https://nominatim.openstreetmap.org/reverse?lat=${minhaPos[0]}&lon=${minhaPos[1]}&format=json`)
       .then(r => r.json())
       .then(d => {
-        const endereco = d.display_name.split(',').slice(0,3).join(',');
-        document.getElementById('origem').value = endereco;
+        document.getElementById('origem').value = d.display_name.split(',')[0] + (d.display_name.split(',')[1] ? ", " + d.display_name.split(',')[1] : "");
       });
 
     document.getElementById('status').textContent = "Localização encontrada!";
   }, () => {
     document.getElementById('status').className = "status error";
-    document.getElementById('status').innerHTML = "Você bloqueou a localização.<br>Digite manualmente.";
+    document.getElementById('status').textContent = "Localização bloqueada. Digite manualmente.";
     document.getElementById('origem').readOnly = false;
   });
 
-  // Autocomplete de verdade no campo destino
-  const campoDestino = document.getElementById('destino');
-  const boxSugestoes = document.getElementById('sugestoes');
+  // Autocomplete GLOBAL (funciona em Angola, Brasil, Portugal, etc.)
+  const campo = document.getElementById('destino');
+  const box = document.getElementById('sugestoes');
 
-  campoDestino.addEventListener('input', () => {
-    const query = campoDestino.value.trim();
-    if (query.length < 3) {
-      boxSugestoes.style.display = 'none';
-      return;
-    }
+  campo.addEventListener('input', () => {
+    const q = campo.value.trim();
+    if (q.length < 2) { box.style.display = 'none'; return; }
 
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=6&countrycodes=br`)
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=7&addressdetails=1`)
       .then(r => r.json())
       .then(data => {
-        boxSugestoes.innerHTML = '';
-        if (data.length === 0) {
-          boxSugestoes.style.display = 'none';
-          return;
-        }
+        box.innerHTML = '';
+        if (!data.length) { box.style.display = 'none'; return; }
 
         data.forEach(item => {
           const div = document.createElement('div');
           div.className = 'sugestao';
-          div.textContent = item.display_name.split(',')[0] + " - " + item.display_name.split(',')[1];
+          div.innerHTML = `<strong>${item.display_name.split(',')[0]}</strong><br><small>${item.display_name.split(',').slice(1,4).join(', ')}</small>`;
           div.onclick = () => {
-            campoDestino.value = item.display_name;
-            boxSugestoes.style.display = 'none';
+            campo.value = item.display_name;
+            box.style.display = 'none';
             tracarRota();
           };
-          boxSugestoes.appendChild(div);
+          box.appendChild(div);
         });
-        boxSugestoes.style.display = 'block';
+        box.style.display = 'block';
       });
   });
 
-  // Fecha sugestões ao clicar fora
-  document.addEventListener('click', (e) => {
-    if (!campoDestino.contains(e.target) && !boxSugestoes.contains(e.target)) {
-      boxSugestoes.style.display = 'none';
-    }
+  // Fecha ao clicar fora
+  document.addEventListener('click', e => {
+    if (!campo.contains(e.target) && !box.contains(e.target)) box.style.display = 'none';
   });
 
   // Traça a rota
   function tracarRota() {
-    const destino = campoDestino.value.trim();
+    const destino = campo.value.trim();
     if (!destino) return alert("Digite o destino!");
 
     if (routingControl) map.removeControl(routingControl);
 
-    // Busca coordenadas do destino
     fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destino)}&format=json&limit=1`)
       .then(r => r.json())
       .then(data => {
         if (!data[0]) return alert("Destino não encontrado. Tente outro nome.");
 
-        const destinoLatLng = L.latLng(data[0].lat, data[0].lon);
+        const fim = L.latLng(data[0].lat, data[0].lon);
 
         routingControl = L.Routing.control({
-          waypoints: [
-            L.latLng(minhaPos[0], minhaPos[1]),
-            destinoLatLng
-          ],
+          waypoints: [L.latLng(minhaPos[0], minhaPos[1]), fim],
           routeWhileDragging: false,
           addWaypoints: false,
           createMarker: () => null,
-          lineOptions: { styles: [{ color: '#1a73e8', weight: 8 }] }
+          lineOptions: { styles: [{ color: '#1a73e8', weight: 9 }] }
         }).addTo(map);
 
-        map.fitBounds([[minhaPos[0], minhaPos[1]], [data[0].lat, data[0].lon]]);
+        map.fitBounds([minhaPos, fim]);
       });
   }
 
   // Animação do marcador
-  const style = document.createElement('style');
-  style.innerHTML = `@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(26,115,232,0.7)}70%{box-shadow:0 0 0 20px rgba(26,115,232,0)}100%{box-shadow:0 0 0 0 rgba(26,115,232,0)}}`;
-  document.head.appendChild(style);
+  const css = document.createElement('style');
+  css.innerHTML = `@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(26,115,232,0.8)}70%{box-shadow:0 0 0 25px rgba(26,115,232,0)}100%{box-shadow:0 0 0 0 rgba(26,115,232,0)}}`;
+  document.head.appendChild(css);
 </script>
 
 </body>
