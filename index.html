@@ -3,55 +3,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minha Localização → Para onde você quer ir?</title>
+  <title>Contigo na Via – Sua rota em 3 segundos</title>
   <meta name="theme-color" content="#1a73e8">
+  <link rel="manifest" href="data:application/manifest+json,{
+    \"name\":\"Contigo na Via\",
+    \"short_name\":\"Contigo\",
+    \"start_url\":\".\",
+    \"display\":\"standalone\",
+    \"background_color\":\"#1a73e8\",
+    \"theme_color\":\"#1a73e8\",
+    \"icons\":[{\"src\":\"https://joseizataquinvula.github.io/contigo-na-via/icon.png\",\"sizes\":\"192x192\",\"type\":\"image/png\"}]
+  }">
   <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; margin:0; background: #f0f2f5; }
-    .container { max-width: 900px; margin: 20px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.15); }
-    header { background: #1a73e8; color: white; padding: 20px; text-align: center; }
-    h1 { margin: 0; font-size: 24px; }
-    .content { padding: 25px; }
-    .input-group { margin: 20px 0; }
-    label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
-    input { width: 100%; padding: 16px; font-size: 18px; border: 2px solid #ddd; border-radius: 12px; box-sizing: border-box; }
-    button { 
-      width: 100%; padding: 18px; font-size: 20px; background: #34a853; color: white; 
-      border: none; border-radius: 12px; cursor: pointer; margin-top: 15px; font-weight: bold;
-    }
-    button:hover { background: #2d9147; }
-    button:disabled { background: #aaa; cursor: not-allowed; }
-    #map { height: 500px; width: 100%; margin-top: 25px; border-radius: 12px; }
-    .status { text-align: center; padding: 15px; font-size: 18px; border-radius: 12px; margin: 15px 0; }
-    .loading { background: #e3f2fd; color: #1565c0; }
-    .success { background: #e8f5e9; color: #2e7d32; }
-    .error { background: #ffebee; color: #c62828; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; height: 100vh; display:flex; flex-direction:column; }
+    header { background:#1a73e8; color:white; padding:20px; text-align:center; }
+    h1 { font-size:24px; }
+    .content { flex:1; padding:20px; overflow:auto; }
+    label { display:block; margin:15px 0 8px; font-weight:bold; color:#333; }
+    input { width:100%; padding:16px; font-size:18px; border:2px solid #ddd; border-radius:12px; }
+    button { width:100%; padding:18px; margin-top:20px; font-size:20px; background:#34a853; color:white; border:none; border-radius:12px; font-weight:bold; }
+    button:disabled { background:#999; }
+    #map { height:450px; width:100%; margin-top:25px; border-radius:16px; border:3px solid #ddd; }
+    .status { padding:15px; text-align:center; border-radius:12px; margin:15px 0; font-size:18px; font-weight:bold; }
+    .loading { background:#e3f2fd; color:#1565c0; }
+    .success { background:#e8f5e9; color:#2e7d32; }
+    .error { background:#ffebee; color:#c62828; }
+    .info { background:#e8f5e9; padding:15px; border-radius:12px; text-align:center; margin:15px 0; font-size:18px; }
+    .gm-err-container, .gm-style .gm-err-container, .gm-err-message { display:none !important; } /* REMOVE O ERRO DO GOOGLE */
   </style>
 </head>
 <body>
 
-<div class="container">
-  <header>
-    <h1>Para onde você quer ir?</h1>
-  </header>
+<header>
+  <h1>Contigo na Via</h1>
+</header>
 
-  <div class="content">
-    <div class="input-group">
-      <label>Sua localização atual</label>
-      <input type="text" id="origem" readonly placeholder="Buscando sua posição...">
-    </div>
+<div class="content">
+  <label>Sua localização atual</label>
+  <input type="text" id="origem" readonly placeholder="Buscando você no mapa...">
 
-    <div class="status loading" id="status">Buscando sua localização atual...</div>
+  <div class="status loading" id="status">Procurando sua localização atual...</div>
 
-    <div class="input-group">
-      <label>Destino</label>
-      <input type="text" id="destino" placeholder="Ex: Aeroporto de Congonhas, Cristo Redentor...">
-    </div>
+  <label>Para onde você quer ir?</label>
+  <input type="text" id="destino" placeholder="Ex: Shopping, praia, trabalho...">
 
-    <button onclick="calcularRota()" id="botaoRota" disabled>Traçar Rota</button>
+  <button onclick="calcularRota()" id="botaoRota" disabled>Traçar Rota Agora</button>
 
-    <div id="info"></div>
-    <div id="map"></div>
-  </div>
+  <div id="info"></div>
+  <div id="map"></div>
 </div>
 
 <!-- Sua chave -->
@@ -59,12 +59,12 @@
 
 <script>
   let map, directionsService, directionsRenderer;
-  let minhaLocalizacao = null;
+  let minhaPos = null;
 
   function initMap() {
     map = new google.maps.Map(document.getElementById('map'), {
-      center: { lat: -14.2350, lng: -51.9253 },
-      zoom: 15
+      zoom: 15,
+      center: { lat: -14.2350, lng: -51.9253 }
     });
 
     directionsService = new google.maps.DirectionsService();
@@ -74,109 +74,82 @@
     });
     directionsRenderer.setMap(map);
 
-    // Autocomplete no campo destino
     new google.maps.places.Autocomplete(document.getElementById('destino'));
 
-    // COMEÇA AUTOMATICAMENTE A BUSCAR A LOCALIZAÇÃO
-    pegarLocalizacaoAutomatico();
+    // COMEÇA AUTOMATICAMENTE
+    pegarLocalizacao();
   }
 
-  function pegarLocalizacaoAutomatico() {
+  function pegarLocalizacao() {
     const status = document.getElementById('status');
 
     if (!navigator.geolocation) {
       status.className = "status error";
       status.textContent = "Seu navegador não suporta localização";
-      document.getElementById('origem').value = "Localização não suportada";
+      ativarManual();
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        minhaLocalizacao = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
+      pos => {
+        minhaPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
 
-        // Converte para endereço bonito
         const geocoder = new google.maps.Geocoder();
-        geocoder.geocode({ location: minhaLocalizacao }, (results, status) => {
-          if (status === "OK" && results[0]) {
-            document.getElementById('origem').value = results[0].formatted_address;
-          } else {
-            document.getElementById('origem').value = `Minha localização atual`;
-          }
-
-          // Atualiza UI
-          document.getElementById('status').className = "status success";
-          document.getElementById('status').textContent = "Localização encontrada!";
-          document.getElementById('botaoRota').disabled = false;
-
-          // Centraliza mapa no usuário
-          map.setCenter(minhaLocalizacao);
-          new google.maps.Marker({
-            position: minhaLocalizacao,
-            map: map,
-            title: "Você está aqui",
-            icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 10,
-              fillColor: "#1a73e8",
-              fillOpacity: 1,
-              strokeWeight: 4,
-              strokeColor: "#fff"
-            }
-          });
+        geocoder.geocode({ location: minhaPos }, (results, st) => {
+          document.getElementById('origem').value = results?.[0]?.formatted_address || "Minha localização atual";
         });
-      },
-      (erro) => {
-        document.getElementById('botaoRota').disabled = false;
-        document.getElementById('origem').readOnly = false;
-        document.getElementById('origem').placeholder = "Digite a origem manualmente";
 
-        if (erro.code === 1) {
-          status.className = "status error";
-          status.innerHTML = "Você bloqueou a localização. <br>Digite a origem manualmente ou permita no navegador.";
-        } else {
-          status.className = "status error";
-          status.textContent = "Não foi possível encontrar sua localização";
-        }
+        map.setCenter(minhaPos);
+        new google.maps.Marker({
+          position: minhaPos,
+          map: map,
+          title: "Você está aqui",
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12, fillColor: "#1a73e8", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 4 }
+        });
+
+        status.className = "status success";
+        status.textContent = "Localização encontrada! Digite o destino";
+        document.getElementById('botaoRota').disabled = false;
       },
-      { timeout: 15000, maximumAge: 60000, enableHighAccuracy: true }
+      err => {
+        status.className = "status error";
+        status.innerHTML = err.code === 1 
+          ? "Você bloqueou a localização.<br>Digite o endereço de origem manualmente."
+          : "Não conseguimos te localizar.";
+        ativarManual();
+      },
+      { timeout: 15000, enableHighAccuracy: true }
     );
+  }
+
+  function ativarManual() {
+    document.getElementById('origem').readOnly = false;
+    document.getElementById('origem').placeholder = "Digite sua rua, bairro ou cidade";
+    document.getElementById('botaoRota').disabled = false;
   }
 
   function calcularRota() {
     const destino = document.getElementById('destino').value.trim();
-    if (!destino) {
-      alert("Digite para onde você quer ir!");
-      return;
-    }
+    if (!destino) return alert("Digite para onde você quer ir!");
 
-    if (!minhaLocalizacao && !document.getElementById('origem').value) {
-      alert("Aguarde a localização ou digite a origem");
-      return;
-    }
+    const origem = minhaPos || document.getElementById('origem').value;
 
-    const request = {
-      origin: minhaLocalizacao || document.getElementById('origem').value,
+    directionsService.route({
+      origin: origem,
       destination: destino,
       travelMode: google.maps.TravelMode.DRIVING
-    };
-
-    directionsService.route(request, (result, status) => {
+    }, (result, status) => {
       if (status === 'OK') {
         directionsRenderer.setDirections(result);
         const leg = result.routes[0].legs[0];
         document.getElementById('info').innerHTML = `
-          <div style="background:#e8f5e9;padding:15px;border-radius:12px;margin:15px 0;text-align:center;font-size:18px;">
-            <strong>Rota pronta!</strong><br>
-            Distância: <strong>${leg.distance.text}</strong> • 
-            Tempo: <strong>${leg.duration.text}</strong>
-          </div>
-        `;
+          <div class="info">
+            Rota pronta!<br>
+            <strong>${leg.distance.text}</strong> • 
+            <strong>${leg.duration.text}</strong>
+          </div>`;
       } else {
-        document.getElementById('info').innerHTML = `<div style="color:red;padding:15px;">Não foi possível traçar a rota. Verifique o destino.</div>`;
+        document.getElementById('info').innerHTML = `<div class="status error">Destino não encontrado. Tente outro endereço.</div>`;
       }
     });
   }
