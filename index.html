@@ -1,517 +1,342 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contigo na Via - Mototáxi App</title>
-    <!-- Tailwind CSS para design responsivo e moderno -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Configuração da fonte Inter (padrão) -->
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f7f7f7;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contigo na Via - Mototáxi</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            primary: '#dc2626', // vermelho vibrante
+            success: '#16a34a',
+          }
         }
-        #map-simulation {
-            height: 100vh;
-            width: 100%;
-        }
-        .overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            padding: 1.5rem;
-            border-top-left-radius: 1.5rem;
-            border-top-right-radius: 1.5rem;
-            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
-            z-index: 100;
-            transform: translateY(0);
-            transition: transform 0.3s ease-in-out;
-        }
-        .overlay.hidden {
-            transform: translateY(100%);
-            pointer-events: none;
-        }
-        .input-container {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding: 0.75rem;
-            background-color: #f0f0f0;
-            border-radius: 0.75rem;
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
-        .icon-pin { color: #22c55e; } /* Verde para Origem */
-        .icon-pin-end { color: #ef4444; } /* Vermelho para Destino */
-    </style>
-    <!-- Google Material Symbols para ícones -->
-    <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  
+  <!-- Material Symbols -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    #map { height: 100vh; width: 100%; }
+    .overlay {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top-left-radius: 1.5rem;
+      border-top-right-radius: 1.5rem;
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.12);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 10;
+    }
+    .overlay.hidden { transform: translateY(100%); }
+    .input-group {
+      @apply flex items-center bg-gray-100 rounded-xl px- px-4 py-4 mb-3 shadow-sm;
+    }
+    .price-estimate { font-size: 2.5rem; font-weight: 800; }
+    #toast {
+      @apply fixed bottom-20 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full bg-gray-900 text-white text-sm font-medium shadow-2xl z-50 opacity-0 transition-opacity duration-300;
+    }
+  </style>
 </head>
+<body class="bg-gray-50 overflow-hidden">
 
-<body class="overflow-hidden">
+  <div id="app" class="relative h-screen">
 
-    <div id="app-container" class="relative min-h-screen">
+    <!-- Mapa -->
+    <div id="map"></div>
 
-        <!-- Header -->
-        <header class="app-header bg-white shadow-md p-4 flex justify-between items-center w-full absolute top-0 z-50">
-            <button id="menu-icon" class="text-gray-600 hover:text-red-600 transition-colors">
-                <span class="material-symbols-outlined">menu</span>
-            </button>
-            <h1 class="app-title text-xl font-bold text-gray-800">Contigo na Via</h1>
-            <button id="profile-icon" class="text-gray-600 hover:text-red-600 transition-colors">
-                <span class="material-symbols-outlined">person</span>
-            </button>
-        </header>
+    <!-- Header -->
+    <header class="absolute top-0 left-0 right-0 bg-white shadow-lg z-20 px-4 py-3 flex items-center justify-between">
+      <button id="menu-btn" class="p-2 rounded-lg hover:bg-gray-100 transition">
+        <span class="material-symbols-outlined text-2xl">menu</span>
+      </button>
+      <h1 class="text-xl font-bold text-gray-800">Contigo na Via</h1>
+      <button id="profile-btn" class="p-2 rounded-lg hover:bg-gray-100 transition">
+        <span class="material-symbols-outlined text-2xl">person</span>
+      </button>
+    </header>
 
-        <main id="main-screen">
-            <!-- Simulação do Mapa -->
-            <div id="map-simulation"></div>
+    <!-- Overlay: Busca -->
+    <div id="search-overlay" class="overlay p-6 pt-8">
+      <p id="auth-status" class="text-xs text-gray-500 mb-3 text-center"></p>
 
-            <!-- Overlay de Busca (Tela 1) -->
-            <div id="search-overlay" class="overlay">
-                <p id="auth-status" class="text-sm text-gray-500 mb-4"></p>
-                <div class="input-container">
-                    <span class="material-symbols-outlined icon-pin mr-3">fiber_manual_record</span>
-                    <input type="text" id="input-origem" value="Carregando sua Localização..." readonly
-                        class="bg-transparent w-full focus:outline-none placeholder-gray-500 text-gray-700">
-                </div>
-                <div class="input-container">
-                    <span class="material-symbols-outlined icon-pin-end mr-3">location_on</span>
-                    <input type="text" id="input-destino" placeholder="Para onde vamos, Contigo na Via?"
-                        class="bg-transparent w-full focus:outline-none placeholder-gray-500 text-gray-700">
-                </div>
+      <div class="input-group">
+        <span class="material-symbols-outlined text-green-600 mr-3">my_location</span>
+        <input type="text" id="origem-input" placeholder="Buscando sua localização..." readonly
+          class="bg-transparent flex-1 outline-none text-gray-800 font-medium" />
+      </div>
 
-                <button id="btn-chamar"
-                    class="w-full primary-button mt-4 flex items-center justify-center space-x-2 bg-red-600 text-white py-3 rounded-xl font-semibold shadow-lg hover:bg-red-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span class="material-symbols-outlined">motorcycle</span> <span>Ver Preço & Chamar</span>
-                </button>
-            </div>
+      <div class="input-group">
+        <span class="material-symbols-outlined text-red-600 mr-3">location_on</span>
+        <input type="text" id="destino-input" placeholder="Para onde vamos hoje?"
+          class="bg-transparent flex-1 outline-none text-gray-800" autocomplete="off" />
+      </div>
 
-            <!-- Overlay de Confirmação (Tela 2) -->
-            <div id="confirmation-overlay" class="overlay hidden">
-                <h3 class="text-2xl font-bold mb-4 text-gray-800">Detalhes da Corrida</h3>
-                <div class="space-y-2 mb-6 text-gray-700">
-                    <p class="flex justify-between">De: <strong id="detalhe-origem" class="font-medium text-right"></strong></p>
-                    <p class="flex justify-between">Para: <strong id="detalhe-destino" class="font-medium text-right"></strong></p>
-                    <p class="flex justify-between">Distância: <strong id="detalhe-distancia" class="font-medium text-right">0 km</strong></p>
-                </div>
-
-                <h2 class="price-estimate text-4xl font-extrabold text-green-600 mb-6 text-center">R$ 0,00</h2>
-
-                <div class="payment-options flex items-center justify-center space-x-2 text-gray-600 bg-gray-100 p-3 rounded-lg mb-6">
-                    <span class="material-symbols-outlined">payments</span> <span>PIX / Dinheiro / Cartão</span>
-                </div>
-
-                <button id="btn-confirmar"
-                    class="w-full primary-button flex items-center justify-center space-x-2 bg-green-600 text-white py-3 rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-all duration-200">
-                    Confirmar e Chamar Motorista
-                </button>
-                <button id="btn-cancelar"
-                    class="w-full secondary-button mt-3 bg-gray-200 text-gray-800 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-all duration-200">
-                    Cancelar
-                </button>
-            </div>
-            
-            <!-- Toast Message for non-intrusive feedback -->
-            <div id="toast-message" class="fixed bottom-4 left-1/2 -translate-x-1/2 p-3 bg-gray-800 text-white rounded-lg shadow-xl opacity-0 transition-opacity duration-300 z-[101]">
-                Mensagem de feedback aqui.
-            </div>
-
-        </main>
+      <button id="btn-ver-preco" disabled
+        class="mt-6 w-full bg-primary text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-3">
+        <span class="material-symbols-outlined">motorcycle</span>
+        <span>Ver Preço e Chamar</span>
+      </button>
     </div>
 
-    <!-- Script principal de inicialização do Google Maps, AGORA COM SUA CHAVE -->
-    <script async
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDXdUY1-1VqaKPzSWMnaeAZ_LZy4Cv9QBU&libraries=places&callback=initMap">
-    </script>
-    
-    <script type="module">
-        // Importações do Firebase SDK (versão 11.6.1)
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, addDoc, onSnapshot, collection, query, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <!-- Overlay: Confirmação -->
+    <div id="confirm-overlay" class="overlay hidden p-6 pt-8">
+      <h2 class="text-2xl font-bold text-gray-800 mb-6">Confirme sua corrida</h2>
 
-        // Variáveis Globais de Mapeamento
-        let map;
-        let directionsService;
-        let directionsRenderer;
-        let geocoder;
-        let originLocation; // Objeto {lat, lng, address}
-        let destinationLocation; // Objeto {lat, lng, address}
+      <div class="space-y-3 text-gray-700 mb-8">
+        <div class="flex justify-between"><span>De:</span> <span id="confirm-origem" class="font-semibold text-right max-w-[60%]"></span></div>
+        <div class="flex justify-between"><span>Para:</span> <span id="confirm-destino" class="font-semibold text-right max-w-[60%]"></span></div>
+        <div class="flex justify-between"><span>Distância:</span> <strong id="confirm-distancia">0 km</strong></div>
+      </div>
 
-        // Variáveis Globais do Firebase
-        let db;
-        let auth;
-        let userId = 'loading';
-        
-        // Configurações e Inicialização do App
-        setLogLevel('Debug');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-mototaxi-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+      <div class="text-center mb-8">
+        <div class="price-estimate text-success" id="preco-final">R$ 0,00</div>
+      </div>
 
-        if (Object.keys(firebaseConfig).length > 0) {
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-            
-            // 1. Configurar Autenticação
-            onAuthStateChanged(auth, async (user) => {
-                const statusElement = document.getElementById('auth-status');
-                if (user) {
-                    userId = user.uid;
-                    statusElement.textContent = `Usuário logado: ${userId}`;
-                    showToast(`Sessão iniciada como ${userId}`);
-                    // Opcional: Iniciar o listener de novas corridas
-                    setupRideRequestMonitor();
-                } else {
-                    // Se não houver token inicial, faz login anônimo
-                    if (initialAuthToken) {
-                        try {
-                            await signInWithCustomToken(auth, initialAuthToken);
-                        } catch (error) {
-                            console.error("Erro ao fazer login com token customizado:", error);
-                            await signInAnonymously(auth);
-                        }
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                    userId = auth.currentUser?.uid || 'anonimo-nao-logado';
-                    statusElement.textContent = `Usuário logado: ${userId}`;
-                }
-            });
-        } else {
-            document.getElementById('auth-status').textContent = "Firebase não configurado. Dados não serão salvos.";
-        }
+      <div class="bg-gray-100 rounded-xl px-4 py-3 flex items-center gap-3 mb-8">
+        <span class="material-symbols-outlined text-gray-600">payments</span>
+        <span class="text-sm font-medium">PIX • Dinheiro • Cartão</span>
+      </div>
 
-        /**
-         * Exibe uma mensagem de feedback não intrusiva.
-         * @param {string} message A mensagem a ser exibida.
-         */
-        function showToast(message) {
-            const toast = document.getElementById('toast-message');
-            toast.textContent = message;
-            toast.style.opacity = '1';
-            setTimeout(() => {
-                toast.style.opacity = '0';
-            }, 3000);
-        }
+      <button id="btn-confirmar-corrida"
+        class="w-full bg-success text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-700 transition flex items-center justify-center gap-3">
+        <span class="material-symbols-outlined">check_circle</span>
+        Confirmar Corrida
+      </button>
 
-        // --- Funções Google Maps ---
+      <button id="btn-voltar"
+        class="mt-3 w-full bg-gray-200 text-gray-800 py-4 rounded-xl font-semibold hover:bg-gray-300 transition">
+        Voltar
+      </button>
+    </div>
 
-        /**
-         * Callback chamada pela API do Google Maps para iniciar o mapa.
-         */
-        window.initMap = function() {
-            const defaultLocation = { lat: -23.5505, lng: -46.6333 }; // São Paulo (Exemplo)
+    <!-- Toast -->
+    <div id="toast">Mensagem aqui</div>
+  </div>
 
-            map = new google.maps.Map(document.getElementById('map-simulation'), {
-                center: defaultLocation,
-                zoom: 12,
-                disableDefaultUI: true,
-                zoomControl: true,
-                streetViewControl: false,
-                mapTypeControl: false,
-            });
+  <!-- Google Maps (chave via config segura) -->
+  <script>
+    // CONFIGURAÇÕES SEGURAS - NUNCA EXPOR NO CLIENTE EM PRODUÇÃO!
+    // Em produção, use um backend proxy ou variáveis de ambiente
+    const GOOGLE_MAPS_API_KEY = "SUA_CHAVE_AQUI; // Substitua ou use proxy
+    const FIREBASE_CONFIG = { /* Cole aqui seu firebaseConfig */ };
+  </script>
 
-            directionsService = new google.maps.DirectionsService();
-            directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: true });
-            geocoder = new google.maps.Geocoder();
+  <script async defer
+    src=`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=initApp`>
+  </script>
 
-            // Tenta obter a localização real e iniciar os serviços
-            getCurrentLocation();
-            setupAutocomplete();
-        }
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
-        /**
-         * Obtém a localização atual do usuário via Geolocation API.
-         */
-        function getCurrentLocation() {
-            const origemInput = document.getElementById('input-origem');
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const pos = {
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude,
-                        };
-                        map.setCenter(pos);
-                        map.setZoom(16);
-                        
-                        // Adicionar marcador na localização atual
-                        new google.maps.Marker({
-                            position: pos,
-                            map: map,
-                            icon: {
-                                path: google.maps.SymbolPath.CIRCLE,
-                                scale: 8,
-                                fillColor: '#22c55e',
-                                fillOpacity: 1,
-                                strokeColor: '#fff',
-                                strokeWeight: 2
-                            },
-                        });
+    // Variáveis globais
+    let map, directionsService, directionsRenderer, geocoder;
+    let origin = null, destination = null;
+    let userId = null;
+    let db, auth;
 
-                        // Geocodifica para obter o endereço
-                        geocodeAddress(pos, (address) => {
-                            origemInput.value = address;
-                            origemInput.readOnly = false;
-                            originLocation = { ...pos, address: address };
-                        }, "Sua Localização Atual");
+    // Inicialização principal
+    window.initApp = function() {
+      initFirebase();
+      initMap();
+    };
 
-                    },
-                    () => {
-                        handleLocationError(true, origemInput);
-                    }
-                );
-            } else {
-                // Navegador não suporta Geolocation
-                handleLocationError(false, origemInput);
-            }
-        }
+    function initFirebase() {
+      if (typeof FIREBASE_CONFIG.apiKey === 'string') {
+        const app = initializeApp(FIREBASE_CONFIG);
+        auth = getAuth(app);
+        db = getFirestore(app);
 
-        /**
-         * Trata erros de geolocalização.
-         */
-        function handleLocationError(browserHasGeolocation, origemInput) {
-            origemInput.value = browserHasGeolocation ?
-                'Erro: O serviço de localização falhou.' :
-                'Erro: Seu navegador não suporta geolocalização.';
-            origemInput.readOnly = false;
-            showToast("Não foi possível obter sua localização. Defina-a manualmente.");
-        }
-
-        /**
-         * Configura o Autocomplete (Sugestões de Endereço) nos campos.
-         */
-        function setupAutocomplete() {
-            const destinoInput = document.getElementById('input-destino');
-            const origemInput = document.getElementById('input-origem');
-
-            // Autocomplete para Destino
-            const autocompleteDestino = new google.maps.places.Autocomplete(destinoInput, {
-                componentRestrictions: { country: 'br' },
-                fields: ["geometry", "formatted_address", "name"],
-            });
-
-            // Autocomplete para Origem (caso o usuário queira mudar a localização atual)
-            const autocompleteOrigem = new google.maps.places.Autocomplete(origemInput, {
-                componentRestrictions: { country: 'br' },
-                fields: ["geometry", "formatted_address", "name"],
-            });
-
-
-            autocompleteDestino.addListener("place_changed", () => {
-                const place = autocompleteDestino.getPlace();
-                if (place.geometry) {
-                    destinationLocation = {
-                        lat: place.geometry.location.lat(),
-                        lng: place.geometry.location.lng(),
-                        address: place.formatted_address || place.name
-                    };
-                    document.getElementById('btn-chamar').disabled = false;
-                } else {
-                    document.getElementById('btn-chamar').disabled = true;
-                    destinationLocation = null;
-                }
-            });
-            
-            autocompleteOrigem.addListener("place_changed", () => {
-                const place = autocompleteOrigem.getPlace();
-                if (place.geometry) {
-                    originLocation = {
-                        lat: place.geometry.location.lat(),
-                        lng: place.geometry.location.lng(),
-                        address: place.formatted_address || place.name
-                    };
-                    map.setCenter(place.geometry.location);
-                } else {
-                    originLocation = null;
-                }
-            });
-        }
-        
-        /**
-         * Geocodifica uma posição (lat/lng) para um endereço legível.
-         * @param {object} latlng Posição {lat, lng}.
-         * @param {function} callback Função a ser chamada com o endereço.
-         * @param {string} fallbackAddress Endereço de fallback.
-         */
-        function geocodeAddress(latlng, callback, fallbackAddress) {
-            geocoder.geocode({ location: latlng }, (results, status) => {
-                if (status === "OK") {
-                    if (results[0]) {
-                        callback(results[0].formatted_address);
-                    } else {
-                        callback(fallbackAddress);
-                    }
-                } else {
-                    console.error("Geocode falhou devido a: " + status);
-                    callback(fallbackAddress);
-                }
-            });
-        }
-
-
-        /**
-         * Calcula a rota, exibe no mapa e estima o preço.
-         */
-        function calculateAndDisplayRoute() {
-            if (!originLocation || !destinationLocation) {
-                showToast("Por favor, selecione os endereços de origem e destino.");
-                return;
-            }
-
-            directionsService.route({
-                origin: new google.maps.LatLng(originLocation.lat, originLocation.lng),
-                destination: new google.maps.LatLng(destinationLocation.lat, destinationLocation.lng),
-                travelMode: google.maps.TravelMode.DRIVING, // Usamos DRIVING para rota de mototáxi
-            }, (response, status) => {
-                if (status === "OK") {
-                    directionsRenderer.setDirections(response);
-                    
-                    const route = response.routes[0].legs[0];
-                    const distanceKm = route.distance.value / 1000;
-                    const durationMinutes = route.duration.value / 60;
-                    
-                    // Lógica de Preço (MOCK: Base R$5 + R$2.50/km)
-                    const basePrice = 5.00;
-                    const pricePerKm = 2.50;
-                    const totalPrice = basePrice + (distanceKm * pricePerKm);
-
-                    // Atualizar a tela de confirmação
-                    document.getElementById('detalhe-origem').textContent = originLocation.address;
-                    document.getElementById('detalhe-destino').textContent = destinationLocation.address;
-                    document.getElementById('detalhe-distancia').textContent = `${distanceKm.toFixed(1)} km`;
-                    document.querySelector('#confirmation-overlay .price-estimate').textContent = 
-                        `R$ ${totalPrice.toFixed(2).replace('.', ',')}`;
-
-                    // Mostrar tela de confirmação
-                    document.getElementById('search-overlay').classList.add('hidden');
-                    document.getElementById('confirmation-overlay').classList.remove('hidden');
-
-                } else {
-                    showToast(`Falha ao calcular rota: ${status}`);
-                    directionsRenderer.setDirections({ routes: [] });
-                }
-            });
-        }
-
-        // --- Funções de UI/Eventos ---
-
-        document.getElementById('btn-chamar').addEventListener('click', calculateAndDisplayRoute);
-        document.getElementById('btn-cancelar').addEventListener('click', () => {
-            document.getElementById('confirmation-overlay').classList.add('hidden');
-            document.getElementById('search-overlay').classList.remove('hidden');
-            directionsRenderer.setDirections({ routes: [] }); // Limpa a rota no mapa
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            userId = user.uid;
+            document.getElementById('auth-status').textContent = `Online • ID: ${user.uid.slice(0,8)}...`;
+          } else {
+            signInAnonymously(auth).catch(console.error);
+          }
         });
-        document.getElementById('btn-confirmar').addEventListener('click', handleConfirmRide);
+      } else {
+        document.getElementById('auth-status').textContent = "Firebase não configurado (modo demo)";
+      }
+    }
 
-        /**
-         * Lida com o clique no botão de Confirmar Corrida.
-         */
-        async function handleConfirmRide() {
-            if (!originLocation || !destinationLocation) return;
-            
-            // Desabilitar o botão para evitar cliques duplicados
-            document.getElementById('btn-confirmar').disabled = true;
-            document.getElementById('btn-confirmar').textContent = 'Chamando motorista...';
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: -23.5505, lng: -46.6333 },
+        zoom: 14,
+        disableDefaultUI: true,
+        zoomControl: true,
+        styles: [{ featureType: "poi", stylers: [{ visibility: "off" }] }]
+      });
 
-            // Simular o cálculo do preço final
-            const priceText = document.querySelector('#confirmation-overlay .price-estimate').textContent;
-            const priceValue = parseFloat(priceText.replace('R$', '').replace(',', '.').trim());
+      directionsService = new google.maps.DirectionsService();
+      directionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: true, polylineOptions: { strokeColor: "#dc2626", strokeWeight: 6 } });
+      directionsRenderer.setMap(map);
+      geocoder = new google.maps.Geocoder();
 
-            const rideRequest = {
-                userId: userId,
-                origem: originLocation,
-                destino: destinationLocation,
-                precoEstimado: priceValue,
-                status: 'SOLICITADA',
-                timestamp: serverTimestamp()
+      getUserLocation();
+      setupAutocomplete();
+      setupEventListeners();
+    }
+
+    function getUserLocation() {
+      const input = document.getElementById('origem-input');
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          const location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          map.setCenter(location);
+          map.setZoom(16);
+
+          new google.maps.Marker({
+            position: location,
+            map,
+            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#16a34a', fillOpacity: 1, strokeWeight: 3, strokeColor: '#fff' }
+          });
+
+          reverseGeocode(location, addr => {
+            input.value = addr;
+            origin = { ...location, address: addr };
+          });
+
+        }, () => {
+          input.value = "Localização bloqueada";
+          showToast("Ative a localização para melhor experiência");
+        });
+      }
+    }
+
+    function reverseGeocode(latlng, callback) {
+      geocoder.geocode({ location: latlng }, (results, status) => {
+        callback(status === "OK" && results[0] ? results[0].formatted_address : "Endereço desconhecido");
+      });
+    }
+
+    function setupAutocomplete() {
+      const destinoInput = document.getElementById('destino-input');
+      const origemInput = document.getElementById('origem-input');
+
+      new google.maps.places.Autocomplete(destinoInput, { componentRestrictions: { country: 'br' }, fields: ["geometry", "formatted_address"] })
+        .addListener("place_changed", () => {
+          const place = this.getPlace();
+          if (place.geometry) {
+            destination = {
+              lat: place.geometry.location.lat(),
+              lng: place.geometry.location.lng(),
+              address: place.formatted_address
             };
+            document.getElementById('btn-ver-preco').disabled = false;
+          }
+        });
 
-            try {
-                await saveRideRequest(rideRequest);
-                
-                // Transição para tela de espera (Simulação)
-                document.getElementById('confirmation-overlay').classList.add('hidden');
-                showToast("Corrida solicitada com sucesso! Aguarde a aceitação do motorista.");
-                
-                // Resetar inputs e mapa após solicitação (ou ir para tela de rastreamento)
-                document.getElementById('input-destino').value = '';
-                document.getElementById('btn-chamar').disabled = true;
-                directionsRenderer.setDirections({ routes: [] });
+      new google.maps.places.Autocomplete(origemInput, { componentRestrictions: { country: 'br' } })
+        .addListener("place_changed", () => {
+          const place = this.getPlace();
+          if (place.geometry) {
+            origin = {
+              lat: place.geometry.location.lat(),
+              lng: place.geometry.location.lng(),
+              address: place.formatted_address
+            };
+            map.setCenter(place.geometry.location);
+          }
+        });
+    }
 
-            } catch (error) {
-                console.error("Erro ao salvar solicitação de corrida:", error);
-                showToast("Erro ao solicitar a corrida. Tente novamente.");
-            } finally {
-                // Reabilitar e restaurar o botão
-                document.getElementById('btn-confirmar').disabled = false;
-                document.getElementById('btn-confirmar').textContent = 'Confirmar e Chamar Motorista';
-                document.getElementById('search-overlay').classList.remove('hidden');
-            }
+    function calculateRoute() {
+      if (!origin || !destination) return showToast("Selecione origem e destino");
+
+      directionsService.route({
+        origin: new google.maps.LatLng(origin.lat, origin.lng),
+        destination: new google.maps.LatLng(destination.lat, destination.lng),
+        travelMode: google.maps.TravelMode.DRIVING,
+      }, (result, status) => {
+        if (status === "OK") {
+          directionsRenderer.setDirections(result);
+          const route = result.routes[0].legs[0];
+          const distancia = (route.distance.value / 1000).toFixed(1);
+          const preco = (5 + distancia * 2.8).toFixed(2); // R$5 bandeirada + R$2,80/km
+
+          // Preço realista para mototáxi
+
+          // Preencher confirmação
+          document.getElementById('confirm-origem').textContent = origin.address;
+          document.getElementById('confirm-destino').textContent = destination.address;
+          document.getElementById('confirm-distancia').textContent = `${distancia} km`;
+          document.getElementById('preco-final').textContent = `R$ ${preco.replace('.',',')}`;
+
+          // Trocar tela
+          document.getElementById('search-overlay').classList.add('hidden');
+          document.getElementById('confirm-overlay').classList.remove('hidden');
+        } else {
+          showToast("Não foi possível calcular a rota");
         }
-        
-        // --- Funções Firestore ---
+      });
+    }
 
-        /**
-         * Salva a solicitação de corrida no Firestore (Acesso Público).
-         * @param {object} requestData Os dados da corrida.
-         */
-        async function saveRideRequest(requestData) {
-            if (!db) {
-                console.warn("Firestore não está inicializado. Dados não foram salvos.");
-                return;
-            }
+    async function confirmarCorrida() {
+      const btn = document.getElementById('btn-confirmar-corrida');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span> Procurando motorista...`;
 
-            // O caminho da coleção pública deve ser /artifacts/{appId}/public/data/{collectionName}
-            const collectionPath = `artifacts/${appId}/public/data/ride_requests`;
-            const ridesCollection = collection(db, collectionPath);
-            
-            const docRef = await addDoc(ridesCollection, requestData);
-            console.log("Solicitação de Corrida salva com ID: ", docRef.id);
-            return docRef.id;
-        }
-        
-        /**
-         * Monitora o status das corridas do usuário. (Simulação)
-         */
-        function setupRideRequestMonitor() {
-            if (!db || userId === 'loading' || userId === 'anonimo-nao-logado') return;
+      const preco = parseFloat(document.getElementById('preco-final').textContent.replace(/[^\d,]/g,'').replace(',','.'));
 
-            const collectionPath = `artifacts/${appId}/public/data/ride_requests`;
-            const q = query(
-                collection(db, collectionPath),
-                // Em um app real, o driver também filtraria por status 'SOLICITADA'
-                // Aqui, monitoramos apenas as solicitadas pelo usuário atual para simular o rastreamento.
-                where("userId", "==", userId)
-            );
+      const corrida = {
+        userId,
+        origem: origin,
+        destino: destination,
+        precoEstimado: preco,
+        distancia: parseFloat(document.getElementById('confirm-distancia').textContent),
+        status: 'solicitada',
+        criadoEm: serverTimestamp()
+      };
 
-            // Ouvinte em tempo real para o status da corrida
-            onSnapshot(q, (snapshot) => {
-                snapshot.docChanges().forEach((change) => {
-                    const data = change.doc.data();
-                    if (change.type === "added" && data.status === 'SOLICITADA') {
-                        console.log("Nova solicitação detectada:", data);
-                        // showToast("Nova corrida registrada no Firestore.");
-                    } else if (change.type === "modified") {
-                        if (data.status === 'ACEITA') {
-                             showToast("Motorista a caminho! Status: ACEITA.");
-                        } else if (data.status === 'CANCELADA') {
-                             showToast("Sua corrida foi cancelada.");
-                        }
-                    }
-                });
-            }, (error) => {
-                console.error("Erro ao monitorar solicitações de corrida:", error);
-            });
-        }
-    </script>
+      try {
+        if (db) await addDoc(collection(db, "corridas"), corrida);
+        showToast("Corrida solicitada! Em breve um motorista aceitará");
+        setTimeout(() => location.reload(), 4000); // Simulação de aceitação
+      } catch (e) {
+        showToast("Erro ao enviar solicitação");
+        console.error(e);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span class="material-symbols-outlined">check_circle</span> Confirmar Corrida`;
+      }
+    }
+
+    function setupEventListeners() {
+      document.getElementById('btn-ver-preco').onclick = calculateRoute;
+      document.getElementById('btn-voltar').onclick = () => {
+        document.getElementById('confirm-overlay').classList.add('hidden');
+        document.getElementById('search-overlay').classList.remove('hidden');
+        directionsRenderer.setDirections({routes: []});
+      };
+      document.getElementById('btn-confirmar-corrida').onclick = confirmarCorrida;
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.style.opacity = '1';
+      setTimeout(() => toast.style.opacity = '0', 3500);
+    }
+  </script>
 </body>
 </html>
